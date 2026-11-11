@@ -1,0 +1,31 @@
+{"id": "p01", "pregunta": "¿Puedo tener un perro?", "refs_esperadas": ["REG-18"]}
+{"id": "p02", "pregunta": "¿Se permiten gatos en el depto?", "refs_esperadas": ["REG-18"]}
+{"id": "p03", "pregunta": "¿Se puede llevar el perro en el ascensor?", "refs_esperadas": ["REG-18"]}
+{"id": "p04", "pregunta": "¿Puedo poner un toldo en el balcón?", "refs_esperadas": ["ACTA-2024-11-10#3", "REG-22"]}
+{"id": "p05", "pregunta": "el toldito del balcón de qué color tiene que ser", "refs_esperadas": ["ACTA-2024-11-10#3"]}
+{"id": "p06", "pregunta": "¿Puedo cerrar el balcón con vidrio?", "refs_esperadas": ["REG-22"]}
+{"id": "p07", "pregunta": "¿A qué hora puedo hacer obras en mi departamento?", "refs_esperadas": ["ACTA-2025-08-20#3"]}
+{"id": "p08", "pregunta": "¿Puedo taladrar un sábado a la mañana?", "refs_esperadas": ["ACTA-2025-08-20#3"]}
+{"id": "p09", "pregunta": "¿Dónde dejo la bici?", "refs_esperadas": ["ACTA-2025-08-20#4"]}
+{"id": "p10", "pregunta": "¿Puedo dejar el cochecito del bebé en el palier?", "refs_esperadas": ["REG-12"]}
+{"id": "p11", "pregunta": "¿A qué hora se saca la basura?", "refs_esperadas": ["REG-13"]}
+{"id": "p12", "pregunta": "¿Puedo poner una antena en la terraza?", "refs_esperadas": ["REG-19"]}
+{"id": "p13", "pregunta": "¿Puedo colgar la ropa en la terraza?", "refs_esperadas": ["REG-19"]}
+{"id": "p14", "pregunta": "¿Dónde puedo instalar el aire acondicionado?", "refs_esperadas": ["REG-23"]}
+{"id": "p15", "pregunta": "el aire del de arriba me gotea en el balcón", "refs_esperadas": ["REG-23"]}
+{"id": "p16", "pregunta": "¿Quién paga si se rompe un caño adentro de mi casa?", "refs_esperadas": ["REG-15"]}
+{"id": "p17", "pregunta": "¿De quién es la montante de agua?", "refs_esperadas": ["REG-16", "REG-3"]}
+{"id": "p18", "pregunta": "¿Tengo que dejar entrar al plomero del consorcio a mi depto?", "refs_esperadas": ["REG-17"]}
+{"id": "p19", "pregunta": "¿Puedo usar el departamento como oficina?", "refs_esperadas": ["REG-10"]}
+{"id": "p20", "pregunta": "el vecino pone música fuerte a la noche", "refs_esperadas": ["REG-11"]}
+{"id": "p21", "pregunta": "¿Hasta qué día puedo pagar las expensas?", "refs_esperadas": ["REG-8"]}
+{"id": "p22", "pregunta": "¿Qué pasa si pago tarde la expensa?", "refs_esperadas": ["REG-8"]}
+{"id": "p23", "pregunta": "¿Para qué se usa el fondo de reserva?", "refs_esperadas": ["REG-9"]}
+{"id": "p24", "pregunta": "¿Cómo se pide una asamblea extraordinaria?", "refs_esperadas": ["REG-26"]}
+{"id": "p25", "pregunta": "¿Cuántos votos hacen falta para aprobar una obra nueva?", "refs_esperadas": ["REG-28", "REG-27"]}
+{"id": "p26", "pregunta": "¿Qué se decidió sobre la montante de la columna B?", "refs_esperadas": ["ACTA-2025-03-14#2", "ACTA-2025-08-20#2"]}
+{"id": "s01", "pregunta": "¿Puedo poner una pileta en la terraza?", "refs_esperadas": []}
+{"id": "s02", "pregunta": "recomendame un plomero barato", "refs_esperadas": []}
+{"id": "s03", "pregunta": "¿Hay wifi en el SUM?", "refs_esperadas": []}
+{"id": "s04", "pregunta": "¿El edificio tiene cochera para visitas?", "refs_esperadas": []}
+{"id": "s05", "pregunta": "¿Cuál es el horario del gimnasio?", "refs_esperadas": []}

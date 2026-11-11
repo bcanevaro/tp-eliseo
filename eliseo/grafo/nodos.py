@@ -2,13 +2,14 @@
 
 Para reemplazar un stub, cambiá su línea por tu función, p. ej.:
 
-    from eliseo.agentes.documental.nodo import documental
+    from eliseo.agentes.documental import nodos as documental
     ...
-    "documental": documental,
+    "documental": documental.documental,
 
 La función tiene que respetar el mismo contrato que el stub (ver eliseo/grafo/stubs.py).
 La estructura del grafo (qué nodo sigue a cuál) vive en conversacion.py y caso.py.
 """
+from eliseo.agentes.documental import nodos as documental
 from eliseo.grafo import stubs
 
 NODOS_CONVERSACION = {
@@ -16,9 +17,9 @@ NODOS_CONVERSACION = {
     "intake": stubs.intake,
     "completar_datos": stubs.completar_datos,
     # agente-documental
-    "documental": stubs.documental,
-    "verificar_consulta": stubs.verificar_consulta,
-    "responder_reglamento": stubs.responder_reglamento,
+    "documental": documental.documental,
+    "verificar_consulta": documental.verificar_consulta,
+    "responder_reglamento": documental.responder_reglamento,
     # agente-gastos
     "gastos": stubs.gastos,
     "responder_gastos": stubs.responder_gastos,
@@ -30,7 +31,7 @@ NODOS_CONVERSACION = {
 
 NODOS_CASO = {
     # agente-documental
-    "documental_caso": stubs.documental_caso,
+    "documental_caso": documental.documental_caso,
     # flujo-reclamo-mediador
     "precedentes": stubs.precedentes,
     "mediador": stubs.mediador,

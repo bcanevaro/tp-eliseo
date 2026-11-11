@@ -14,7 +14,7 @@ un dict con las claves que actualizan. Los mensajes al vecino del turno van en "
 """
 import re
 
-from eliseo import textos
+from eliseo import textos, verificador
 from eliseo.corpus import cargar_corpus
 from eliseo.formato import nombre_periodo, normalizar, pesos
 from eliseo.plataforma import escritura, lectura
@@ -33,7 +33,6 @@ from eliseo.schemas import (
     RespuestaGastos,
     RespuestaVecino,
     ResultadoIntake,
-    tipo_de_referencia,
 )
 
 # ---------------------------------------------------------------- intake (canal-telegram-intake)
@@ -154,40 +153,11 @@ def documental(state: dict) -> dict:
     return {"documental": RespuestaDocumental(respuesta=respuesta[:600], citas=citas, suficiente=bool(citas))}
 
 
-def verificar_citas(consorcio_id: str, citas: list[Cita | str]) -> dict:
-    """Verificador mínimo: existencia, vigencia y fragmento literal (el real va en eliseo/verificador)."""
-    corpus, conn = cargar_corpus(consorcio_id), get_conn()
-    fallas = []
-    for c in citas:
-        ref = c if isinstance(c, str) else c.referencia
-        tipo = tipo_de_referencia(ref)
-        if tipo in ("Reglamento", "Acta"):
-            doc = corpus.get(ref)
-            if doc is None:
-                fallas.append({"cita": ref, "motivo": "referencia inexistente"})
-            elif not doc.vigente:
-                fallas.append({"cita": ref, "motivo": f"no vigente: reemplazado por {doc.reemplazado_por}"})
-            elif isinstance(c, Cita) and normalizar(c.fragmento).rstrip(".") not in normalizar(doc.texto):
-                fallas.append({"cita": ref, "motivo": "fragmento no encontrado"})
-        elif tipo == "Precedente":
-            if not any(p["prec_id"] == ref for p in lectura.precedentes(conn, consorcio_id)):
-                fallas.append({"cita": ref, "motivo": "referencia inexistente"})
-        elif tipo == "Factura":
-            if not lectura.factura(conn, consorcio_id, ref):
-                fallas.append({"cita": ref, "motivo": "referencia inexistente"})
-        elif tipo == "Liquidacion":
-            if not lectura.liquidacion(conn, consorcio_id, ref.removeprefix("LIQ-")):
-                fallas.append({"cita": ref, "motivo": "referencia inexistente"})
-        else:
-            fallas.append({"cita": ref, "motivo": "formato de referencia inválido"})
-    return {"ok": not fallas, "fallas": fallas}
-
-
 def verificar_consulta(state: dict) -> dict:
     doc = state["documental"]
     if not doc.suficiente or not doc.citas:
         return {"verificacion_consulta": {"ok": False, "fallas": [], "motivo": "sin evidencia"}}
-    return {"verificacion_consulta": verificar_citas(state["identidad"].consorcio_id, doc.citas)}
+    return {"verificacion_consulta": verificador.verificar_citas(state["identidad"].consorcio_id, doc.citas)}
 
 
 def _con_fuentes(texto: str, refs: list[str]) -> str:
@@ -281,7 +251,7 @@ def mediador(state: dict) -> dict:
 
 
 def verificar_dictamen(state: dict) -> dict:
-    v = verificar_citas(state["caso"].consorcio_id, sorted(state["dictamen"].todas_las_citas()))
+    v = verificador.verificar_dictamen(state["caso"].consorcio_id, state["dictamen"])
     return {"verificacion": v, "vueltas": state.get("vueltas", 0) + (0 if v["ok"] else 1)}
 
 

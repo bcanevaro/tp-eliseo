@@ -89,7 +89,7 @@ Es código sin LLM y reemplaza a `stubs.verificar_citas`.
 - **El texto del vecino y el de los documentos** van siempre dentro de etiquetas, como dato.
 
 ### D8. Paquete de citas para el reclamo
-`documental_caso` corre la misma búsqueda con una consulta armada desde el reclamo: ambiente, descripción y "cañerías, montantes, filtración". Además trae las actas que mencionan la misma columna o instalación. Devuelve `RespuestaDocumental` con las citas, sin redactar respuesta.
+`documental_caso` usa el mismo retriever, sin LLM, con tres consultas: el reclamo (ambiente y descripción), las instalaciones de uso exclusivo a cargo de la unidad y las cañerías generales a cargo del consorcio. Son tres porque el Mediador tiene que poder plantear hipótesis de los dos lados, y una sola consulta tiende a traer solo uno (en las pruebas traía REG-16 y no REG-15). Además trae las actas que mencionan la misma columna o instalación. Devuelve `RespuestaDocumental` con las citas, sin redactar respuesta.
 
 ### D9. Evaluación
 - **Recuperación, sin LLM:** `evaluation/documental/preguntas.jsonl`, con unas 25 preguntas en lenguaje vecinal y sus `refs_esperadas`. Las métricas son recall@3 y MRR, por paso: dense solo, BM25 solo, RRF, y RRF con rerank, para justificar el híbrido con números. Se corre local y se sube como experimento a LangSmith.

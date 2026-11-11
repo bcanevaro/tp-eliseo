@@ -6,4 +6,5 @@ Cada versión nueva va en `prompts/<nombre>.v<N>.md` y se elige con `PROMPT_<NOM
 |---|---|---|---|---|
 | vecino | v1 | 21/10/2026 | Primera versión, del artefacto de Design | Sale del Discovery: abstención sin fuente y aprobación humana obligatoria (riesgo 1). |
 | mediador | v1 | 21/10/2026 | Primera versión, del artefacto de Design | Ídem. |
+| documental | v1 | 11/11/2026 | Primera versión: prompt de búsqueda del agente Documental (no habla con el vecino) | Change agente-documental: tiene que leer el acta cuando un artículo figura como modificado o reemplazado, copiar los fragmentos literales y devolver suficiente=false si no hay evidencia. |
 | vecino, mediador | v1 | 10/11/2026 | Al pasarlos al repo: ids canónicos en los ejemplos (REG-22, ACTA-2024-11-10#3, PREC-2201) en lugar de "Art. 22" y "#2201"; canal Telegram | El verificador de citas resuelve solo ids canónicos (spec contratos-compartidos). No cambia el comportamiento. |
