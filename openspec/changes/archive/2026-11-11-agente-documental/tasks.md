@@ -41,4 +41,4 @@
 - [x] 6.1 `evaluation/documental/preguntas.jsonl`: unas 25 preguntas vecinales con sus `refs_esperadas` (incluye coloquiales, artículos modificados y sin fuente)
 - [x] 6.2 Script de evaluación de recuperación: recall@3 y MRR para dense, BM25, RRF y RRF con rerank; resultados en LangSmith y en `evaluation/documental/RESULTADOS.md`
 - [ ] 6.3 Con crédito en el proxy: experimento del agente en LangSmith sobre `uso-01`, `borde-02`, `neg-01` y `neg-04` con evaluadores determinísticos
-- [ ] 6.4 `openspec validate agente-documental --strict`, mergear a `main` y `openspec archive agente-documental`
+- [x] 6.4 `openspec validate agente-documental --strict`, mergear a `main` y `openspec archive agente-documental`

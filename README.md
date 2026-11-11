@@ -32,9 +32,9 @@ Comandos útiles: `openspec list`, `openspec view`, `openspec show <nombre>`, `o
 
 | Change | Capabilities | Dueño | Depende de |
 |---|---|---|---|
-| `bootstrap-proyecto` | contratos-compartidos, datos-ficticios, grafo-orquestacion | Bruno | — |
+| `bootstrap-proyecto` ✓ | contratos-compartidos, datos-ficticios, grafo-orquestacion | Bruno | — |
 | `canal-telegram-intake` | canal-telegram, intake-router | A | bootstrap |
-| `agente-documental` | ingesta-documental, agente-documental, verificador-citas | B | bootstrap |
+| `agente-documental` ✓ | ingesta-documental, agente-documental, verificador-citas | Bruno | bootstrap |
 | `agente-gastos` | agente-gastos, motor-reglas | C | bootstrap |
 | `flujo-reclamo-mediador` | agente-mediador, precedentes | D | bootstrap, documental (se arranca con stubs) |
 | `panel-admin-ejecucion` | panel-admin, ejecucion, evaluacion-e2e | E | bootstrap, canal (se arranca con fixtures) |
