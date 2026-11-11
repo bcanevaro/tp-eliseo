@@ -1,0 +1,97 @@
+{
+  "_nota": "Datos ficticios. Teléfonos con prefijo +54 9 11 0000, que no corresponde a líneas reales (los abonados no empiezan con 0).",
+  "consorcio": {
+    "consorcio_id": "R4520",
+    "nombre": "Consorcio Rivadavia 4520",
+    "direccion": "Rivadavia 4520, CABA",
+    "administracion": "Administración Méndez",
+    "administradora": "Laura Méndez",
+    "telefono_emergencias": "911 (emergencias) · 0800-000-0000 (guardia técnica de la administración)"
+  },
+  "unidades": [
+    {"unidad_id": "R4520-1A", "unidad": "1°A", "piso": 1, "depto": "A", "coeficiente": "0.0850"},
+    {"unidad_id": "R4520-1B", "unidad": "1°B", "piso": 1, "depto": "B", "coeficiente": "0.0750"},
+    {"unidad_id": "R4520-2A", "unidad": "2°A", "piso": 2, "depto": "A", "coeficiente": "0.0850"},
+    {"unidad_id": "R4520-2B", "unidad": "2°B", "piso": 2, "depto": "B", "coeficiente": "0.0750"},
+    {"unidad_id": "R4520-3A", "unidad": "3°A", "piso": 3, "depto": "A", "coeficiente": "0.0850"},
+    {"unidad_id": "R4520-3B", "unidad": "3°B", "piso": 3, "depto": "B", "coeficiente": "0.0750"},
+    {"unidad_id": "R4520-4A", "unidad": "4°A", "piso": 4, "depto": "A", "coeficiente": "0.0850"},
+    {"unidad_id": "R4520-4B", "unidad": "4°B", "piso": 4, "depto": "B", "coeficiente": "0.0750"},
+    {"unidad_id": "R4520-5A", "unidad": "5°A", "piso": 5, "depto": "A", "coeficiente": "0.0850"},
+    {"unidad_id": "R4520-5B", "unidad": "5°B", "piso": 5, "depto": "B", "coeficiente": "0.0750"},
+    {"unidad_id": "R4520-6A", "unidad": "6°A", "piso": 6, "depto": "A", "coeficiente": "0.1000"},
+    {"unidad_id": "R4520-6B", "unidad": "6°B", "piso": 6, "depto": "B", "coeficiente": "0.1000"}
+  ],
+  "vecinos": [
+    {"telefono": "+5491100000101", "unidad_id": "R4520-1A", "nombre": "Marta Giménez"},
+    {"telefono": "+5491100000102", "unidad_id": "R4520-1B", "nombre": "Julián Ferreyra"},
+    {"telefono": "+5491100000201", "unidad_id": "R4520-2A", "nombre": "Rosa Benítez"},
+    {"telefono": "+5491100000202", "unidad_id": "R4520-2B", "nombre": "Tomás Acuña"},
+    {"telefono": "+5491100000301", "unidad_id": "R4520-3A", "nombre": "Carlos Medina"},
+    {"telefono": "+5491100000302", "unidad_id": "R4520-3B", "nombre": "Lucía Paz"},
+    {"telefono": "+5491100000401", "unidad_id": "R4520-4A", "nombre": "Héctor Rivas"},
+    {"telefono": "+5491100000402", "unidad_id": "R4520-4B", "nombre": "Sofía Lagos"},
+    {"telefono": "+5491100000501", "unidad_id": "R4520-5A", "nombre": "Andrés Molina"},
+    {"telefono": "+5491100000502", "unidad_id": "R4520-5B", "nombre": "Valeria Soto"},
+    {"telefono": "+5491100000601", "unidad_id": "R4520-6A", "nombre": "Ernesto Vidal"},
+    {"telefono": "+5491100000602", "unidad_id": "R4520-6B", "nombre": "Paula Correa"}
+  ],
+  "telefonos_no_registrados_para_tests": ["+5491100009999"],
+  "facturas": [
+    {"fac_id": "FAC-0100", "proveedor": "Administración Méndez", "concepto": "Honorarios de administración 09/2026", "monto": "210000.00", "fecha": "2026-09-30", "periodo": "2026-09"},
+    {"fac_id": "FAC-0101", "proveedor": "Ascensores Del Plata SRL", "concepto": "Abono de mantenimiento del ascensor 09/2026", "monto": "185000.00", "fecha": "2026-09-05", "periodo": "2026-09"},
+    {"fac_id": "FAC-0102", "proveedor": "Limpieza Total SA", "concepto": "Artículos de limpieza 09/2026", "monto": "62000.00", "fecha": "2026-09-12", "periodo": "2026-09"},
+    {"fac_id": "FAC-0103", "proveedor": "Distribuidora Eléctrica Sur", "concepto": "Electricidad de espacios comunes 09/2026", "monto": "98500.00", "fecha": "2026-09-20", "periodo": "2026-09"},
+    {"fac_id": "FAC-0104", "proveedor": "Ascensores Del Plata SRL", "concepto": "Abono de mantenimiento del ascensor 10/2026", "monto": "185000.00", "fecha": "2026-10-05", "periodo": "2026-10"},
+    {"fac_id": "FAC-0105", "proveedor": "Limpieza Total SA", "concepto": "Artículos de limpieza 10/2026", "monto": "62000.00", "fecha": "2026-10-12", "periodo": "2026-10"},
+    {"fac_id": "FAC-0106", "proveedor": "Distribuidora Eléctrica Sur", "concepto": "Electricidad de espacios comunes 10/2026", "monto": "98500.00", "fecha": "2026-10-20", "periodo": "2026-10"},
+    {"fac_id": "FAC-0107", "proveedor": "Plomería Hnos. Ruiz", "concepto": "Reparación de pérdida en la montante de agua de la columna B, a la altura del 3er piso", "monto": "340000.00", "fecha": "2026-10-16", "periodo": "2026-10"},
+    {"fac_id": "FAC-0108", "proveedor": "Ascensores Del Plata SRL", "concepto": "Reemplazo de la botonera de cabina del ascensor", "monto": "275000.00", "fecha": "2026-10-22", "periodo": "2026-10"},
+    {"fac_id": "FAC-0109", "proveedor": "Administración Méndez", "concepto": "Honorarios de administración 10/2026", "monto": "210000.00", "fecha": "2026-10-31", "periodo": "2026-10"}
+  ],
+  "liquidaciones": [
+    {
+      "liq_id": "LIQ-2026-09", "periodo": "2026-09", "fecha_emision": "2026-10-01", "vencimiento": "2026-10-10",
+      "lineas": [
+        {"rubro": "Personal", "concepto": "Sueldo y cargas sociales del encargado", "monto": "1450000.00", "comprobante": null},
+        {"rubro": "Administración", "concepto": "Honorarios de administración", "monto": "210000.00", "comprobante": "FAC-0100"},
+        {"rubro": "Mantenimiento", "concepto": "Abono de mantenimiento del ascensor", "monto": "185000.00", "comprobante": "FAC-0101"},
+        {"rubro": "Limpieza", "concepto": "Artículos de limpieza", "monto": "62000.00", "comprobante": "FAC-0102"},
+        {"rubro": "Servicios", "concepto": "Electricidad de espacios comunes", "monto": "98500.00", "comprobante": "FAC-0103"},
+        {"rubro": "Fondo de reserva", "concepto": "Aporte al fondo de reserva (5 % de las ordinarias)", "monto": "100275.00", "comprobante": null}
+      ]
+    },
+    {
+      "liq_id": "LIQ-2026-10", "periodo": "2026-10", "fecha_emision": "2026-11-01", "vencimiento": "2026-11-10",
+      "lineas": [
+        {"rubro": "Personal", "concepto": "Sueldo y cargas sociales del encargado", "monto": "1450000.00", "comprobante": null},
+        {"rubro": "Administración", "concepto": "Honorarios de administración", "monto": "210000.00", "comprobante": "FAC-0109"},
+        {"rubro": "Mantenimiento", "concepto": "Abono de mantenimiento del ascensor", "monto": "185000.00", "comprobante": "FAC-0104"},
+        {"rubro": "Limpieza", "concepto": "Artículos de limpieza", "monto": "62000.00", "comprobante": "FAC-0105"},
+        {"rubro": "Servicios", "concepto": "Electricidad de espacios comunes", "monto": "98500.00", "comprobante": "FAC-0106"},
+        {"rubro": "Reparaciones", "concepto": "Reparación de pérdida en la montante B (3er piso)", "monto": "340000.00", "comprobante": "FAC-0107"},
+        {"rubro": "Reparaciones", "concepto": "Reemplazo de la botonera del ascensor", "monto": "275000.00", "comprobante": "FAC-0108"},
+        {"rubro": "Fondo de reserva", "concepto": "Aporte al fondo de reserva (5 % de las ordinarias)", "monto": "100275.00", "comprobante": null}
+      ]
+    }
+  ],
+  "pagos": {
+    "_nota": "Unidades que NO pagaron cada período. El resto pagó el total el día 8 del mes de vencimiento.",
+    "LIQ-2026-09": ["R4520-3A"],
+    "LIQ-2026-10": ["R4520-3A"]
+  },
+  "precedentes": [
+    {
+      "prec_id": "PREC-2195", "unidad_id": "R4520-5A", "tipo": "filtracion", "ubicacion": "columna A, baño",
+      "descripcion": "Humedad con goteo en el techo del baño del 5°A, originada en el flexible del lavarropas del 6°A.",
+      "resolucion": "A cargo de la unidad 6°A, por tratarse de una instalación de uso exclusivo (REG-15).",
+      "responsable": "unidad", "fecha": "2024-03-11", "procedencia": "histórico cargado por la administración"
+    },
+    {
+      "prec_id": "PREC-2201", "unidad_id": "R4520-3B", "tipo": "filtracion", "ubicacion": "columna B, baño",
+      "descripcion": "Filtración en el techo del baño del 3°B originada en la montante de agua de la columna B.",
+      "resolucion": "A cargo del consorcio, por tratarse de una cañería general (REG-16). Se reparó el tramo afectado.",
+      "responsable": "consorcio", "fecha": "2024-07-22", "procedencia": "histórico cargado por la administración"
+    }
+  ]
+}

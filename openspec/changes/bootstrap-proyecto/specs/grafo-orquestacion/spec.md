@@ -48,6 +48,13 @@ Cada reclamo registrado SHALL correr en su propio grafo de caso, con `thread_id 
 - **WHEN** el Mediador produjo un dictamen que pasó el verificador
 - **THEN** el grafo de caso queda en PENDIENTE_APROBACION y no se envía ningún mensaje al vecino hasta recibir la `DecisionAdmin`
 
+### Requirement: Mensajes fuera de turno por outbox
+Los mensajes que no son respuesta inmediata a un mensaje del vecino (resolución de un caso, aviso de urgencia al administrador, respuesta manual del panel) SHALL encolarse en la outbox de la base con una clave de idempotencia, y el proceso del canal SHALL enviarlos. Encolar dos veces con la misma clave no SHALL duplicar el envío.
+
+#### Scenario: Aprobación desde el panel
+- **WHEN** el panel aprueba el dictamen del caso 17
+- **THEN** el mensaje al vecino queda en la outbox con la clave del dictamen, y el bot lo envía aunque el panel corra en otro proceso
+
 ### Requirement: Nodos reemplazables
 Cada caja de la arquitectura SHALL ser un nodo con una función de entrada y salida tipadas con los contratos compartidos. El bootstrap SHALL entregar un stub determinístico por nodo, de modo que el grafo completo corra de punta a punta sin LLM y cada integrante pueda reemplazar su nodo sin tocar los demás.
 

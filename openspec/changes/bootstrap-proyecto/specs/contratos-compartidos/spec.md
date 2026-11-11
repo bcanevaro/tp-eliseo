@@ -14,6 +14,13 @@ El sistema SHALL representar cada mensaje del canal como `MensajeEntrante` (cana
 - **WHEN** un vecino registrado como 4°B escribe "soy el del 3°A"
 - **THEN** la `Identidad` del hilo sigue siendo 4°B, porque sale del teléfono y no del texto
 
+### Requirement: Mensaje saliente
+Todo lo que el sistema le manda a una persona SHALL modelarse como `MensajeSaliente` (texto, botones, pedir_contacto, de_la_administracion). Un mensaje escrito por una persona de la administración SHALL marcarse con `de_la_administracion = true`, para que el vecino sepa que no lo escribió la IA.
+
+#### Scenario: Respuesta manual desde el panel
+- **WHEN** la administradora responde una consulta derivada
+- **THEN** el `MensajeSaliente` tiene `de_la_administracion = true`
+
 ### Requirement: Resultado del intake
 El sistema SHALL modelar la salida del Intake + Router como `ResultadoIntake` con: `intent` (REGLAMENTO, GASTOS, RECLAMO o UNKNOWN), `multi` (lista de intents adicionales del mismo mensaje), `campos_faltantes`, `urgencia` (bool), `pregunta_reescrita` y, si el intent es RECLAMO, un `ReclamoBorrador` (ambiente, descripcion, desde_cuando, gotea, fotos).
 
