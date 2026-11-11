@@ -39,4 +39,4 @@
 - [x] 5.2 `evaluation/casos.jsonl` con los 12 casos del artefacto (tipo, prompt, input, esperado, criterios)
 - [x] 5.3 README: cómo levantar el entorno, cómo correr los tests y el flujo de trabajo con OpenSpec
 - [x] 5.4 `openspec validate bootstrap-proyecto --strict` sin errores
-- [ ] 5.5 Mergear a `main` y correr `openspec archive bootstrap-proyecto`
+- [x] 5.5 Mergear a `main` y correr `openspec archive bootstrap-proyecto`
