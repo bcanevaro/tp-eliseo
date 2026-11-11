@@ -15,7 +15,7 @@ Cada chunk SHALL guardar `consorcio_id`, `doc_tipo` (reglamento o acta), `ref` (
 - **THEN** el chunk del acta tiene `modifica = "REG-22"` y el chunk de `REG-22` queda marcado con la modificación
 
 ### Requirement: Ingesta idempotente
-`scripts/ingest.py` SHALL poder correrse varias veces sobre el mismo consorcio sin duplicar vectores, usando el id canónico como id del vector.
+`scripts/ingest.py` SHALL poder correrse varias veces sobre el mismo consorcio sin duplicar vectores, usando como id del vector `<consorcio_id>:<ref>` (el id canónico prefijado por el consorcio, para que dos consorcios con un `REG-14` no se pisen).
 
 #### Scenario: Reingesta
 - **WHEN** se corre la ingesta dos veces sobre el Consorcio Rivadavia 4520

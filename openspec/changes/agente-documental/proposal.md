@@ -25,7 +25,8 @@ Responder el reglamento con la fuente citada es el valor más directo para el ve
 
 ## Impact
 
-- **Dueño:** Integrante B.
+- **Dueño:** Bruno.
 - **Depende de:** `bootstrap-proyecto` (contratos `Cita` y `RespuestaDocumental`, corpus, `eliseo/vectores.py`). **Lo usa:** `flujo-reclamo-mediador`.
 - **Origen:** cajas "Documental" y "Verificador de citas" del artefacto; prompt "Respuestas al vecino" v1; casos de test de mascotas, artículo modificado por acta, pileta y las inyecciones.
-- **Dependencias nuevas:** `rank_bm25` (o la que se elija en el design) y el reranker hospedado de Pinecone.
+- **Dependencias nuevas:** `rank_bm25` y `snowballstemmer` (BM25 con stemming en español); de Pinecone, el índice con embedding integrado (`multilingual-e5-large`) y el reranker hospedado (`bge-reranker-v2-m3`). Ver design D1 y D3.
+- **Cambia código del bootstrap:** `eliseo/vectores.py` pasa a crear un índice con embedding integrado (1024 dimensiones en lugar de 1536). Afecta también al namespace `precedentes` de `flujo-reclamo-mediador`, que gana la vectorización del lado de Pinecone.

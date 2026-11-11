@@ -11,6 +11,10 @@ El verificador SHALL ser código sin LLM. Para cada `Cita` SHALL comprobar que (
 - **WHEN** la referencia existe pero el fragmento no aparece en su texto
 - **THEN** la cita es inválida con motivo "fragmento no encontrado"
 
+#### Scenario: Fragmento recortado
+- **WHEN** el fragmento es "Ningún propietario podrá modificar la fachada..." (un recorte con puntos suspensivos)
+- **THEN** la cita es válida si cada tramo entre los puntos suspensivos aparece literal y en orden en el texto de la referencia
+
 #### Scenario: Artículo derogado
 - **WHEN** la cita apunta a un artículo cuyo texto fue reemplazado por un acta anterior a la fecha del caso
 - **THEN** la cita es inválida con motivo "no vigente" e indica el acta vigente
