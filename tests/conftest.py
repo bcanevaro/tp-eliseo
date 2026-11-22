@@ -7,6 +7,9 @@ from eliseo.plataforma.db import conectar
 def sin_red(request, monkeypatch):
     """Por defecto los tests no usan red ni LLM: Documental en modo retriever y solo BM25, Gastos e Intake sin LLM.
     Los tests marcados `pinecone` usan la configuración real."""
+    # Los tests no mandan trazas a LangSmith aunque el .env tenga LANGSMITH_TRACING=true.
+    monkeypatch.setenv("LANGSMITH_TRACING", "false")
+    monkeypatch.setenv("LANGCHAIN_TRACING_V2", "false")
     if request.node.get_closest_marker("pinecone"):
         yield
         return

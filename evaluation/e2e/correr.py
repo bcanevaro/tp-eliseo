@@ -80,7 +80,8 @@ def correr_caso(caso: dict) -> dict:
     from eliseo.plataforma import escritura
     from eliseo.plataforma.db import get_conn
 
-    with tempfile.TemporaryDirectory() as d:
+    # ignore_cleanup_errors: en Windows SQLite deja los archivos abiertos y no se pueden borrar al salir.
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         _entorno_aislado(Path(d))
         conn, tel = get_conn(), _telefono(caso["unidad"])
         salida = {"textos": [], "dictamen": None, "verificacion": None}
@@ -258,6 +259,7 @@ def subir_a_langsmith(repeticiones: int, con_juez: bool) -> str:
 
 
 if __name__ == "__main__":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # la consola de Windows no es UTF-8 por defecto
     ap = argparse.ArgumentParser()
     ap.add_argument("--repeticiones", type=int, default=1)
     ap.add_argument("--juez", action="store_true")

@@ -104,6 +104,7 @@ def subir_a_langsmith() -> str:
 
 
 if __name__ == "__main__":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # la consola de Windows no es UTF-8 por defecto
     ap = argparse.ArgumentParser()
     ap.add_argument("--langsmith", action="store_true")
     ap.add_argument("--detalle", action="store_true")

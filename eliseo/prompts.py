@@ -8,4 +8,4 @@ def cargar(nombre: str, version: str | None = None) -> str:
     Los placeholders ({consorcio_nombre}, {criterios_procedimentales}…) se completan con
     str.replace o con un PromptTemplate: el JSON de ejemplo tiene llaves, así que no usar .format().
     """
-    return (PROMPTS_DIR / f"{nombre}.{version or version_prompt(nombre)}.md").read_text()
+    return (PROMPTS_DIR / f"{nombre}.{version or version_prompt(nombre)}.md").read_text(encoding="utf-8")

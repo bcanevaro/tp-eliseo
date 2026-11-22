@@ -74,7 +74,7 @@ def seed(path: Path | None = None, raiz: Path = CONSORCIOS_DIR) -> Path:
     borrar_todo(conn)
     crear_esquema(conn)
     for archivo in sorted(raiz.glob("*/plataforma.json")):
-        cargar_consorcio(conn, json.loads(archivo.read_text()))
+        cargar_consorcio(conn, json.loads(archivo.read_text(encoding="utf-8")))
     conn.commit()
     conn.close()
     checkpoints = checkpoint_db_path()

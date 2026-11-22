@@ -10,7 +10,7 @@ from eliseo.formato import normalizar
 from eliseo.prompts import cargar
 from eliseo.schemas import Dictamen, RespuestaVecino, tipo_de_referencia
 
-CASOS = [json.loads(l) for l in (RAIZ / "evaluation" / "casos.jsonl").read_text().splitlines() if l.strip()]
+CASOS = [json.loads(l) for l in (RAIZ / "evaluation" / "casos.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
 
 
 def _salidas_de_ejemplo(prompt: str) -> list[dict]:

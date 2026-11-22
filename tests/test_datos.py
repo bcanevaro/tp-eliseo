@@ -20,7 +20,7 @@ def _volcado(path):
 
 # Requirement: Consorcio de demo — Scenario: Revisión de datos personales
 def test_telefonos_en_rango_ficticio():
-    datos = json.loads((CONSORCIOS_DIR / "rivadavia-4520" / "plataforma.json").read_text())
+    datos = json.loads((CONSORCIOS_DIR / "rivadavia-4520" / "plataforma.json").read_text(encoding="utf-8"))
     telefonos = [v["telefono"] for v in datos["vecinos"]] + datos["telefonos_no_registrados_para_tests"]
     assert all(re.fullmatch(r"\+54911000\d{5}", t) for t in telefonos)
 

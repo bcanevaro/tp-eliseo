@@ -107,5 +107,6 @@ def telegram() -> None:
 
 
 if __name__ == "__main__":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # la consola de Windows no es UTF-8 por defecto
     for chequeo in (proxy, estructurado, pinecone, langsmith, telegram):
         chequeo()

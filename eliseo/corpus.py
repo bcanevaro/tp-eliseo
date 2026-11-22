@@ -90,20 +90,20 @@ class Corpus:
 
 def directorio_consorcio(consorcio_id: str, raiz: Path = CONSORCIOS_DIR) -> Path:
     for plataforma in raiz.glob("*/plataforma.json"):
-        if json.loads(plataforma.read_text())["consorcio"]["consorcio_id"] == consorcio_id:
+        if json.loads(plataforma.read_text(encoding="utf-8"))["consorcio"]["consorcio_id"] == consorcio_id:
             return plataforma.parent
     raise KeyError(f"No hay datos para el consorcio {consorcio_id}")
 
 
 def leer_corpus(directorio: Path) -> Corpus:
     docs: list[Documento] = []
-    reglamento = (directorio / "reglamento.md").read_text()
+    reglamento = (directorio / "reglamento.md").read_text(encoding="utf-8")
     meta = _parse_meta(reglamento)
     for ref, titulo, texto, _ in _secciones(reglamento):
         docs.append(Documento(ref, "Reglamento", meta["consorcio_id"], titulo, texto, meta["fecha"]))
 
     for archivo in sorted((directorio / "actas").glob("*.md")):
-        contenido = archivo.read_text()
+        contenido = archivo.read_text(encoding="utf-8")
         meta = _parse_meta(contenido)
         for ref, titulo, texto, m in _secciones(contenido):
             docs.append(Documento(ref, "Acta", meta["consorcio_id"], titulo, texto, meta["fecha"],
