@@ -117,8 +117,12 @@ def _despues_de_identificar(state: EstadoConversacion) -> str:
 
 def _fan_out(state: EstadoConversacion):
     intents = state["intake"].intents()
-    if state["intake"].urgencia and intents == [Intent.UNKNOWN]:
-        return END  # la urgencia ya se respondió; no hace falta repreguntar
+    if state["intake"].urgencia:
+        # La urgencia ya se respondió y la atiende la administración: no se repregunta ni se
+        # piden los datos del reclamo (ambiente, foto…) a alguien que está en una emergencia.
+        intents = [i for i in intents if i not in (Intent.UNKNOWN, Intent.RECLAMO)]
+        if not intents:
+            return END
     return [Send(RAMA_POR_INTENT[i], state) for i in intents]
 
 

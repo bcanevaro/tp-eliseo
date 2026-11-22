@@ -21,6 +21,7 @@ jobs:
         env:
           DOCUMENTAL_MODO: retriever
           GASTOS_MODO: codigo
+          INTAKE_MODO: reglas
         run: |
           python evaluation/e2e/correr.py | tee e2e.txt
           grep -q "sobrevive una ronda de negativos»: SÍ" e2e.txt

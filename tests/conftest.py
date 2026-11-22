@@ -5,7 +5,7 @@ from eliseo.plataforma.db import conectar
 
 @pytest.fixture(autouse=True)
 def sin_red(request, monkeypatch):
-    """Por defecto los tests no usan red ni LLM: Documental en modo retriever y solo BM25, Gastos sin LLM.
+    """Por defecto los tests no usan red ni LLM: Documental en modo retriever y solo BM25, Gastos e Intake sin LLM.
     Los tests marcados `pinecone` usan la configuración real."""
     if request.node.get_closest_marker("pinecone"):
         yield
@@ -14,6 +14,7 @@ def sin_red(request, monkeypatch):
 
     monkeypatch.setenv("DOCUMENTAL_MODO", "retriever")
     monkeypatch.setenv("GASTOS_MODO", "codigo")
+    monkeypatch.setenv("INTAKE_MODO", "reglas")
     monkeypatch.setattr(retriever, "_config", {"dense": None, "reranker": None})
     yield
 

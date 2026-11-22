@@ -33,7 +33,7 @@ Comandos útiles: `openspec list`, `openspec view`, `openspec show <nombre>`, `o
 | Change | Capabilities | Dueño | Depende de |
 |---|---|---|---|
 | `bootstrap-proyecto` ✓ | contratos-compartidos, datos-ficticios, grafo-orquestacion | Bruno | — |
-| `canal-telegram-intake` | canal-telegram, intake-router | A | bootstrap |
+| `canal-telegram-intake` (implementado) | canal-telegram, intake-router | A | bootstrap |
 | `agente-documental` ✓ | ingesta-documental, agente-documental, verificador-citas | Bruno | bootstrap |
 | `agente-gastos` (implementado) | agente-gastos, motor-reglas | C | bootstrap |
 | `flujo-reclamo-mediador` | agente-mediador, precedentes | D | bootstrap, documental (se arranca con stubs) |
@@ -69,18 +69,31 @@ Abre en http://localhost:8501. Tiene dos vistas:
 - **Panel de la administración:** bandeja (urgencias primero), detalle del dictamen con lo escrito por la IA marcado y cada cita con su fuente, y Aprobar / Modificar / Rechazar con confirmación.
 - **Simulador de vecino:** un chat que usa el mismo runtime que el bot, para probar el flujo completo sin Telegram. Los mensajes que se aprueban en el panel aparecen ahí.
 
+## Bot de Telegram
+
+```bash
+python -m eliseo.canal.bot
+```
+
+Necesita `TELEGRAM_BOT_TOKEN` en el `.env`. En Telegram:
+- `/chatid` te devuelve el id del chat: ponelo en `TELEGRAM_CHAT_ADMIN_ID` para recibir ahí las urgencias.
+- `/demo 4°B` (con `ELISEO_DEMO=1`) vincula tu Telegram con el vecino ficticio de esa unidad, porque tu número real no está en la base de demo.
+
+El bot y el panel comparten `data/eliseo.db`: lo que se aprueba en el panel le llega al vecino por Telegram en unos segundos.
+
 ## Evaluación de punta a punta
 
 ```bash
 python evaluation/e2e/correr.py                    # 12 casos del artefacto, evaluadores determinísticos
 python evaluation/e2e/correr.py --juez --langsmith # + juez LLM de tono y relevancia, experimento en LangSmith
+python evaluation/intake/eval_intake.py --langsmith  # intake como clasificador: precision/recall por intent y recall de urgencias
 ```
 
 ## Docker y CI
 
 ```bash
 docker compose up --build                 # siembra la base si no existe y levanta el panel en :8501
-docker compose --profile bot up --build   # además el bot (cuando exista eliseo/canal/bot.py)
+docker compose --profile bot up --build   # además el bot de Telegram
 ```
 
 El CI (`.github/workflows/ci.yml`) corre `pytest`, la evaluación de punta a punta sin LLM y el build de la imagen en cada push.

@@ -60,13 +60,23 @@ def thread_caso(caso_id: int) -> str:
     return f"caso:{caso_id}"
 
 
-def procesar_mensaje(msg: MensajeEntrante) -> list[MensajeSaliente]:
+def procesar_mensaje(msg: MensajeEntrante, al_avanzar=None, lanzar_caso=None) -> list[MensajeSaliente]:
+    """`al_avanzar(nodo, actualizacion)`, si se pasa, se llama después de cada nodo (el canal lo
+    usa para mostrar el estado, p. ej. "Buscando en el reglamento…").
+    `lanzar_caso(caso_id, telefono)`, si se pasa, reemplaza a `iniciar_caso`: el bot lo usa para
+    correr el análisis del reclamo después de contestarle al vecino."""
     conversacion, _ = grafos()
     config = {"configurable": {"thread_id": thread_conversacion(msg)}}
-    resultado = conversacion.invoke({"mensaje": msg}, config)
+    if al_avanzar is None:
+        resultado = conversacion.invoke({"mensaje": msg}, config)
+    else:
+        for paso in conversacion.stream({"mensaje": msg}, config, stream_mode="updates"):
+            for nodo, actualizacion in paso.items():
+                al_avanzar(nodo, actualizacion)
+        resultado = conversacion.get_state(config).values
     identidad = resultado.get("identidad")
     for caso_id in resultado.get("casos_lanzados") or []:
-        iniciar_caso(caso_id, identidad.telefono)
+        (lanzar_caso or iniciar_caso)(caso_id, identidad.telefono)
     return resultado.get("salidas", [])
 
 

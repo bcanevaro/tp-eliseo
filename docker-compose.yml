@@ -1,5 +1,5 @@
 # docker compose up --build    → siembra la base (si no existe) y levanta el panel en http://localhost:8501
-# docker compose --profile bot up --build   → además, el bot de Telegram (cuando exista eliseo/canal/bot.py)
+# docker compose --profile bot up --build   → además, el bot de Telegram
 services:
   seed:
     build: .

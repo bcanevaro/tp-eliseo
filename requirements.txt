@@ -47,6 +47,7 @@ pygments==2.21.0
 pytest==9.1.1
 python-dateutil==4.0.0
 python-dotenv==1.2.4
+python-telegram-bot==22.8
 pyyaml==6.0.3
 rank-bm25==0.2.2
 regex==2026.11.9

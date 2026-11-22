@@ -12,12 +12,13 @@ La estructura del grafo (qué nodo sigue a cuál) vive en conversacion.py y caso
 from eliseo import ejecucion
 from eliseo.agentes.documental import nodos as documental
 from eliseo.agentes.gastos import nodos as gastos
+from eliseo.intake import intake
 from eliseo.grafo import stubs
 
 NODOS_CONVERSACION = {
     # canal-telegram-intake
-    "intake": stubs.intake,
-    "completar_datos": stubs.completar_datos,
+    "intake": intake,
+    "completar_datos": stubs.completar_datos,  # código puro: pide de a un dato lo que falta
     # agente-documental
     "documental": documental.documental,
     "verificar_consulta": documental.verificar_consulta,
