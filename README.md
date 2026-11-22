@@ -35,9 +35,9 @@ Comandos útiles: `openspec list`, `openspec view`, `openspec show <nombre>`, `o
 | `bootstrap-proyecto` ✓ | contratos-compartidos, datos-ficticios, grafo-orquestacion | Bruno | — |
 | `canal-telegram-intake` | canal-telegram, intake-router | A | bootstrap |
 | `agente-documental` ✓ | ingesta-documental, agente-documental, verificador-citas | Bruno | bootstrap |
-| `agente-gastos` | agente-gastos, motor-reglas | C | bootstrap |
+| `agente-gastos` (implementado) | agente-gastos, motor-reglas | C | bootstrap |
 | `flujo-reclamo-mediador` | agente-mediador, precedentes | D | bootstrap, documental (se arranca con stubs) |
-| `panel-admin-ejecucion` | panel-admin, ejecucion, evaluacion-e2e | E | bootstrap, canal (se arranca con fixtures) |
+| `panel-admin-ejecucion` (implementado) | panel-admin, ejecucion, evaluacion-e2e | E | bootstrap, canal (se arranca con fixtures) |
 
 El bootstrap deja el grafo entero corriendo con stubs, así cada uno reemplaza su nodo sin esperar a los demás. Los cinco changes de componentes ya tienen proposal y specs; cada dueño escribe su `design.md` y `tasks.md` como primer paso.
 
@@ -56,7 +56,34 @@ uv pip install -r requirements.txt
 cp .env.example .env          # completar las claves: proxy del ITBA, Pinecone, LangSmith
 python scripts/seed_db.py     # crea data/eliseo.db con el consorcio de demo
 pytest                        # tiene que dar todo en verde, sin red ni LLM
+python scripts/check_servicios.py   # verifica el .env y la conexión al proxy, Pinecone, LangSmith y Telegram
 ```
+
+## Panel del administrador y simulador de vecino
+
+```bash
+streamlit run eliseo/panel/app.py
+```
+
+Abre en http://localhost:8501. Tiene dos vistas:
+- **Panel de la administración:** bandeja (urgencias primero), detalle del dictamen con lo escrito por la IA marcado y cada cita con su fuente, y Aprobar / Modificar / Rechazar con confirmación.
+- **Simulador de vecino:** un chat que usa el mismo runtime que el bot, para probar el flujo completo sin Telegram. Los mensajes que se aprueban en el panel aparecen ahí.
+
+## Evaluación de punta a punta
+
+```bash
+python evaluation/e2e/correr.py                    # 12 casos del artefacto, evaluadores determinísticos
+python evaluation/e2e/correr.py --juez --langsmith # + juez LLM de tono y relevancia, experimento en LangSmith
+```
+
+## Docker y CI
+
+```bash
+docker compose up --build                 # siembra la base si no existe y levanta el panel en :8501
+docker compose --profile bot up --build   # además el bot (cuando exista eliseo/canal/bot.py)
+```
+
+El CI (`.github/workflows/ci.yml`) corre `pytest`, la evaluación de punta a punta sin LLM y el build de la imagen en cada push.
 
 ## Cómo está armado el código
 

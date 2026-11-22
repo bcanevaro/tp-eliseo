@@ -1,0 +1,28 @@
+# docker compose up --build    → siembra la base (si no existe) y levanta el panel en http://localhost:8501
+# docker compose --profile bot up --build   → además, el bot de Telegram (cuando exista eliseo/canal/bot.py)
+services:
+  seed:
+    build: .
+    env_file: .env
+    volumes: ["./data:/app/data"]
+    # Solo siembra si la base no existe, para no borrar casos en cada arranque.
+    command: ["sh", "-c", "test -f data/eliseo.db || python scripts/seed_db.py"]
+
+  panel:
+    build: .
+    env_file: .env
+    volumes: ["./data:/app/data"]
+    ports: ["8501:8501"]
+    depends_on:
+      seed: {condition: service_completed_successfully}
+    restart: unless-stopped
+
+  bot:
+    build: .
+    profiles: ["bot"]
+    env_file: .env
+    volumes: ["./data:/app/data"]
+    command: ["python", "-m", "eliseo.canal.bot"]
+    depends_on:
+      seed: {condition: service_completed_successfully}
+    restart: unless-stopped
