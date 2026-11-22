@@ -39,7 +39,7 @@ from eliseo.schemas import (
 
 _URGENCIA = ["gas", "encerrad", "atrapad", "incendio", "fuego", "humo", "chispa", "electrocut", "inund"]
 _RECLAMO = ["humedad", "filtra", "gotea", "goteo", "llueve", "perdida", "mancha", "rot", "no anda", "no funciona"]
-_GASTOS = ["expensa", "pague", "pagar", "pago", "debo", "deuda", "gasto", "factura", "cuenta", "saldo",
+_GASTOS = ["expensa", "pague", "pagar", "pago", "debo", "debe", "deuda", "gasto", "factura", "cuenta", "saldo",
            "cuanto se", "liquidacion", "subio"]
 _REGLAMENTO = ["puedo", "se puede", "reglamento", "permit", "prohib", "toldo", "perro", "gato", "mascota",
                "obra", "horario", "pileta", "bicicleta", "ruido"]

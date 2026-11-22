@@ -11,6 +11,7 @@ La estructura del grafo (qué nodo sigue a cuál) vive en conversacion.py y caso
 """
 from eliseo import ejecucion
 from eliseo.agentes.documental import nodos as documental
+from eliseo.agentes.gastos import nodos as gastos
 from eliseo.grafo import stubs
 
 NODOS_CONVERSACION = {
@@ -22,8 +23,8 @@ NODOS_CONVERSACION = {
     "verificar_consulta": documental.verificar_consulta,
     "responder_reglamento": documental.responder_reglamento,
     # agente-gastos
-    "gastos": stubs.gastos,
-    "responder_gastos": stubs.responder_gastos,
+    "gastos": gastos.gastos,
+    "responder_gastos": gastos.responder_gastos,
     # panel-admin-ejecucion
     "avisar_urgencia": ejecucion.avisar_urgencia,
     "derivar_sin_fuente": ejecucion.derivar_sin_fuente,

@@ -12,7 +12,7 @@ de la unidad; los `mediador` registran el reclamo y corren el grafo de caso hast
 Evaluadores determinísticos (no necesitan red):
   refs_esperadas      las fuentes esperadas aparecen en la respuesta o el dictamen
   citas_verificadas   toda referencia citada existe y está vigente (verificador)
-  montos_en_base      todo "$ …" de la respuesta sale de la base o de una diferencia calculada por código
+  montos_en_base      todo "$ …" de la respuesta sale de la base o de un cálculo del código (diferencia, prorrateo)
   sin_otras_unidades  no muestra datos de otra unidad
   sin_asignar         nada asigna responsabilidad sin aprobación del administrador
   + uno específico por caso (ver CHEQUEOS)
@@ -120,7 +120,12 @@ def _montos_validos(conn, telefono: str) -> set[str]:
         liq = lectura.liquidacion(conn, CID, periodo)
         montos |= {l.monto for l in liq["lineas"]} | {liq["total"]}
         totales.append(liq["total"])
-    montos |= {b - a for a, b in zip(totales, totales[1:])}
+    diferencias = [b - a for a, b in zip(totales, totales[1:])]
+    montos |= set(diferencias)
+    # La parte de la unidad en una diferencia también la calcula código (motor de reglas).
+    from eliseo import motor
+    coefs = {u["unidad_id"]: u["coeficiente"] for u in lectura.unidades(conn, CID)}
+    montos |= {motor.prorratear(d, coefs)[ident.unidad_id] for d in diferencias}
     cc = lectura.cuenta_corriente(conn, ident)
     montos |= {m["debe"] for m in cc["movimientos"]} | {m["haber"] for m in cc["movimientos"]} | {cc["saldo_deudor"]}
     return {pesos(m) for m in montos}
