@@ -239,3 +239,44 @@ def test_la_app_del_bot_se_arma_sin_red():
     app = bot.construir_app("123456:TOKEN-DE-PRUEBA")
     comandos = {c for h in app.handlers[0] for c in getattr(h, "commands", [])}
     assert {"start", "chatid", "demo"} <= comandos
+
+
+# ---------------------------------------------------------------- ajustes de la primera prueba real
+
+def test_respuesta_corta_completa_el_dato_y_no_repite_la_descripcion(con_llm):
+    # El LLM copió la descripción del contexto y no entendió que "mancha" responde "¿gotea?".
+    con_llm(_ModeloFalso(ResultadoIntake(intent=Intent.RECLAMO, reclamo=ReclamoBorrador(
+        descripcion="Hay humedad en el techo del baño", ambiente="baño"))))
+    en_curso = ReclamoBorrador(descripcion="Hay humedad en el techo del baño", ambiente="baño", desde_cuando="hace 1 semana")
+    r = intake_mod.intake(_estado("mancha", reclamo=en_curso))["intake"]
+    assert r.reclamo.gotea is False and r.reclamo.descripcion == ""
+    assert en_curso.completar(r.reclamo).descripcion == "Hay humedad en el techo del baño"
+
+
+def test_cita_parafraseada_cae_al_modo_retriever(db_path):
+    from eliseo.agentes.documental import nodos as doc_nodos
+    from eliseo.schemas import Cita, RespuestaDocumental
+
+    ident = lectura.identidad_por_telefono(get_conn(), TEL_4B)
+    estado = {"identidad": ident, "mensaje": MensajeEntrante(chat_id="c", usuario_canal_id="u", texto="¿Puedo tener un perro?"),
+              "intake": ResultadoIntake(intent=Intent.REGLAMENTO, pregunta_reescrita="tenencia de animales domésticos en las unidades")}
+    parafraseada = Cita(documento="Reglamento", referencia="REG-18", fragmento="Se pueden tener mascotas si no molestan.")
+    estado["documental"] = RespuestaDocumental(respuesta="Sí", citas=[parafraseada], suficiente=True)
+    r = doc_nodos.verificar_consulta(estado)
+    assert r["verificacion_consulta"]["ok"] and r["verificacion_consulta"]["respaldo"] == "retriever"
+    assert [c.referencia for c in r["documental"].citas] == ["REG-18"]
+    assert r["documental"].citas[0].fragmento != parafraseada.fragmento  # la paráfrasis no se usa
+
+    inventada = Cita(documento="Reglamento", referencia="REG-99", fragmento="Se pueden tener mascotas.")
+    estado["documental"] = RespuestaDocumental(respuesta="Sí", citas=[inventada], suficiente=True)
+    assert not doc_nodos.verificar_consulta(estado)["verificacion_consulta"]["ok"]
+
+
+def test_el_verificador_acepta_el_titulo_del_articulo(db_path):
+    from eliseo import verificador
+    from eliseo.corpus import cargar_corpus
+    from eliseo.schemas import Cita
+
+    doc = cargar_corpus("R4520").get("REG-18")
+    cita = Cita(documento="Reglamento", referencia="REG-18", fragmento=f"{doc.titulo}. {doc.texto.split('.')[0]}")
+    assert verificador.verificar_citas("R4520", [cita])["ok"]

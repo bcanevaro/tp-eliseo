@@ -61,6 +61,23 @@ def entrada(state: dict) -> str:
     return "\n".join(partes)
 
 
+def _ajustar_reclamo(r: ReclamoBorrador, texto: str, en_curso: ReclamoBorrador | None) -> ReclamoBorrador:
+    """Correcciones al reclamo que extrae el LLM:
+    - Los campos que el LLM dejó vacíos se completan con las reglas (p. ej. "mancha" → gotea=False).
+    - Si ya hay un reclamo en curso, no se vuelve a sumar la misma descripción: el LLM tiende a
+      copiarla del contexto en cada respuesta."""
+    reglas = stubs._extraer_reclamo(texto)
+    descripcion = r.descripcion
+    if en_curso and normalizar(descripcion) and normalizar(descripcion) in normalizar(en_curso.descripcion):
+        descripcion = ""
+    return r.model_copy(update={
+        "ambiente": r.ambiente or reglas.ambiente,
+        "desde_cuando": r.desde_cuando or reglas.desde_cuando,
+        "gotea": r.gotea if r.gotea is not None else reglas.gotea,
+        "descripcion": descripcion,
+    })
+
+
 def clasificar(state: dict, modelo) -> ResultadoIntake:
     ident = state["identidad"]
     sistema = cargar("intake").replace("{consorcio_nombre}", lectura.consorcio(get_conn(), ident.consorcio_id)["nombre"])
@@ -84,6 +101,8 @@ def intake(state: dict) -> dict:
             log.warning("Intake: proxy no disponible (%s); uso las reglas", e)
     if resultado is None:
         resultado = stubs.intake(state)["intake"]
+    elif resultado.reclamo is not None:
+        resultado = resultado.model_copy(update={"reclamo": _ajustar_reclamo(resultado.reclamo, texto, state.get("reclamo_en_curso"))})
     if es_urgencia_por_palabras(texto) and not resultado.urgencia:
         resultado = resultado.model_copy(update={"urgencia": True})
     # Si hay un reclamo en curso y el mensaje trae una foto sin texto, es un dato del reclamo.

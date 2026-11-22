@@ -73,7 +73,7 @@ def _verificar_ref(corpus: Corpus | None, conn: sqlite3.Connection, consorcio_id
             acta = corpus.get(doc.reemplazado_por)
             if date.fromisoformat(acta.fecha) <= fecha:
                 return {"cita": ref, "motivo": f"no vigente: reemplazado por {acta.ref}", "vigente": acta.ref}
-        texto = doc.texto
+        texto = f"{doc.titulo}. {doc.texto}"  # el agente ve el título junto al texto y a veces lo cita
     else:
         texto = _texto_de_base(conn, consorcio_id, ref)
         if texto is None:

@@ -58,6 +58,16 @@ def verificar_consulta(state: dict) -> dict:
     resultados = [(c, verificar_citas(cid, [c])) for c in doc.citas]
     validas = [c for c, r in resultados if r["ok"]]
     fallas = [f for _, r in resultados for f in r["fallas"]]
+    if not validas and fallas and all(f["motivo"] == "fragmento no encontrado" for f in fallas):
+        # El agente encontró documentos que existen pero no copió el texto literal. No se corrige
+        # su paráfrasis: se descarta y se usa el modo sin LLM, cuyas citas son literales.
+        respaldo = respuesta_retriever(cid, state["intake"].pregunta_reescrita or state["mensaje"].texto)
+        if respaldo.suficiente and respaldo.citas and verificar_citas(cid, respaldo.citas)["ok"]:
+            log.info("Documental: citas parafraseadas (%s); respondo con el modo retriever",
+                     ", ".join(f["cita"] for f in fallas))
+            return {"documental": respaldo,
+                    "verificacion_consulta": {"ok": True, "fallas": fallas, "descartadas": len(doc.citas),
+                                              "respaldo": "retriever"}}
     return {
         "documental": doc.model_copy(update={"citas": validas}),
         "verificacion_consulta": {"ok": bool(validas), "fallas": fallas, "descartadas": len(doc.citas) - len(validas)},
