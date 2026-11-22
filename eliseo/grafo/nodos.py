@@ -9,6 +9,7 @@ Para reemplazar un stub, cambiá su línea por tu función, p. ej.:
 La función tiene que respetar el mismo contrato que el stub (ver eliseo/grafo/stubs.py).
 La estructura del grafo (qué nodo sigue a cuál) vive en conversacion.py y caso.py.
 """
+from eliseo import ejecucion
 from eliseo.agentes.documental import nodos as documental
 from eliseo.grafo import stubs
 
@@ -24,9 +25,9 @@ NODOS_CONVERSACION = {
     "gastos": stubs.gastos,
     "responder_gastos": stubs.responder_gastos,
     # panel-admin-ejecucion
-    "avisar_urgencia": stubs.avisar_urgencia,
-    "derivar_sin_fuente": stubs.derivar_sin_fuente,
-    "hablar_con_admin": stubs.hablar_con_admin,
+    "avisar_urgencia": ejecucion.avisar_urgencia,
+    "derivar_sin_fuente": ejecucion.derivar_sin_fuente,
+    "hablar_con_admin": ejecucion.hablar_con_admin,
 }
 
 NODOS_CASO = {
@@ -37,6 +38,6 @@ NODOS_CASO = {
     "mediador": stubs.mediador,
     "verificar_dictamen": stubs.verificar_dictamen,
     # panel-admin-ejecucion
-    "ejecucion": stubs.ejecucion,
-    "rechazo": stubs.rechazo,
+    "ejecucion": ejecucion.ejecucion,
+    "rechazo": ejecucion.rechazo,
 }

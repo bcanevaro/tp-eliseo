@@ -110,6 +110,33 @@ def marcar_enviado(conn: sqlite3.Connection, outbox_id: int) -> None:
     conn.commit()
 
 
+def resolver_derivacion(conn: sqlite3.Connection, derivacion_id: int, estado: str = "respondida") -> None:
+    conn.execute("UPDATE derivaciones SET estado = ? WHERE id = ?", (estado, derivacion_id))
+    conn.commit()
+
+
+def crear_precedente(conn: sqlite3.Connection, *, consorcio_id: str, unidad_id: str, tipo: str,
+                     ubicacion: str | None, descripcion: str, resolucion: str, responsable: str,
+                     caso_id: int, dictamen_id: int, procedencia: str) -> tuple[str, bool]:
+    """Memoria episódica (spec precedentes): solo se llama desde la ejecución de un dictamen
+    aprobado. Idempotente por dictamen. Devuelve (prec_id, creado_ahora)."""
+    previo = conn.execute("SELECT prec_id FROM precedentes WHERE dictamen_id = ?", (dictamen_id,)).fetchone()
+    if previo:
+        return previo["prec_id"], False
+    (ultimo,) = conn.execute(
+        "SELECT COALESCE(MAX(CAST(SUBSTR(prec_id, 6) AS INTEGER)), 0) FROM precedentes").fetchone()
+    prec_id = f"PREC-{ultimo + 1}"
+    conn.execute(
+        """INSERT INTO precedentes (prec_id, consorcio_id, unidad_id, tipo, ubicacion, descripcion, resolucion,
+                                    responsable, fecha, caso_id, dictamen_id, procedencia)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, date('now'), ?, ?, ?)""",
+        (prec_id, consorcio_id, unidad_id, tipo, ubicacion, descripcion, resolucion, responsable,
+         caso_id, dictamen_id, procedencia),
+    )
+    conn.commit()
+    return prec_id, True
+
+
 def crear_pedido(conn: sqlite3.Connection, caso_id: int, dictamen_id: int, tipo: str, descripcion: str) -> tuple[int, bool]:
     """Idempotente por (dictamen_id, tipo). Devuelve (id, creado_ahora)."""
     cur = conn.execute(
