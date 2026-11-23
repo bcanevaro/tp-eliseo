@@ -12,7 +12,7 @@ Cada hipótesis SHALL tener al menos una cita con id del corpus, la base o los p
 
 #### Scenario: Caso sin artículo aplicable
 - **WHEN** ni el reglamento ni las actas ni los precedentes tienen algo aplicable al reclamo
-- **THEN** el dictamen no inventa hipótesis: recomienda inspección o deriva, con `hipotesis` vacía y `recomendacion.tipo = "inspeccion"`
+- **THEN** el dictamen no inventa hipótesis: recomienda inspección, con `hipotesis` vacía y `recomendacion.tipo = "inspeccion"`
 
 ### Requirement: Solo cita lo provisto
 Toda cita del dictamen SHALL estar en el paquete de Documental o en los precedentes que recibió el Mediador. Una cita con formato válido que no estaba en ese contexto SHALL rechazarse con el motivo "cita no provista en el contexto", igual que una cita que no existe o no está vigente.
