@@ -17,7 +17,9 @@ context: |
 
   Stack del MVP: Python 3.12 con uv, LangGraph (StateGraph, interrupt para HITL, checkpointer
   SQLite), LangChain + proxy LiteLLM del ITBA (LLM_SERVICE_URL / LLM_API_KEY, modelos GPT),
-  embeddings text-embedding-3-small (1536), Pinecone para vectores, SQLite como mock de la
+  Pinecone para vectores con embedding integrado (multilingual-e5-large, 1024, vectorizado del
+  lado de Pinecone; fijo en eliseo/vectores.py, design D1 de agente-documental) y reranker
+  bge-reranker-v2-m3, SQLite como mock de la
   plataforma de gestión, Telegram como canal (python-telegram-bot), Streamlit para el panel,
   LangSmith para trazas y evaluación, pytest para tests.
 

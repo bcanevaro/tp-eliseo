@@ -5,7 +5,7 @@
 - get_reasoning_model: Mediador (LLM_MODEL_REASONING). No recibe temperature porque los
   modelos de razonamiento la rechazan.
 """
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_openai import ChatOpenAI
 
 from eliseo.config import env
 
@@ -29,13 +29,3 @@ def get_model(temperature: float = 0) -> ChatOpenAI:
 
 def get_reasoning_model() -> ChatOpenAI:
     return ChatOpenAI(model=env("LLM_MODEL_REASONING", "LLM_MODEL"), **_proxy())
-
-
-def get_embeddings() -> OpenAIEmbeddings:
-    # check_embedding_ctx_length=False: evita que LangChain tokenice con tiktoken un modelo
-    # que está detrás del proxy.
-    return OpenAIEmbeddings(
-        model=env("EMBEDDING_MODEL", default="text-embedding-3-small"),
-        check_embedding_ctx_length=False,
-        **_proxy(),
-    )
