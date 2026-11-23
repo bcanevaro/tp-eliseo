@@ -12,7 +12,7 @@ Cada hipótesis SHALL tener al menos una cita con id del corpus, la base o los p
 
 #### Scenario: Caso sin artículo aplicable
 - **WHEN** ni el reglamento ni las actas ni los precedentes tienen algo aplicable al reclamo
-- **THEN** el dictamen no inventa hipótesis: recomienda inspección o deriva, con `hipotesis` vacía o solo con la de inspección
+- **THEN** el dictamen no inventa hipótesis: recomienda inspección o deriva, con `hipotesis` vacía y `recomendacion.tipo = "inspeccion"`
 
 ### Requirement: Solo cita lo provisto
 Toda cita del dictamen SHALL estar en el paquete de Documental o en los precedentes que recibió el Mediador. Una cita con formato válido que no estaba en ese contexto SHALL rechazarse con el motivo "cita no provista en el contexto", igual que una cita que no existe o no está vigente.
@@ -29,15 +29,15 @@ El Mediador SHALL recomendar `asignar` solo si una hipótesis tiene cita y ningu
 - **THEN** la recomendación es `inspeccion` y `accion` describe qué revisar
 
 #### Scenario: El modelo asigna igual
-- **WHEN** el modelo devuelve `asignar` a la hipótesis A y la hipótesis B, también con cita, tiene otro responsable
-- **THEN** el código cambia la recomendación a `inspeccion` antes de que el dictamen llegue al verificador
+- **WHEN** el modelo devuelve `asignar` a la hipótesis A y la hipótesis B, también con cita, tiene otro responsable (o la hipótesis A no tiene citas)
+- **THEN** el código cambia la recomendación a `inspeccion` (con `hipotesis = null`) y ajusta `mensaje_vecino` a un aviso neutral de inspección antes de que el dictamen llegue al verificador
 
 ### Requirement: Loop con el verificador
-Si el verificador rechaza citas del dictamen, el grafo SHALL devolverle al Mediador los motivos y su dictamen anterior y pedir una versión completa nueva, con un máximo de 2 vueltas. Si sigue fallando, SHALL pasar a la hipótesis C (inspección) y el caso SHALL ir al panel marcando qué citas no se pudieron verificar. Una salida que no valida contra el schema SHALL tener un único reintento de formato, que no cuenta como vuelta del verificador.
+Si el verificador rechaza citas del dictamen, el grafo SHALL devolverle al Mediador los motivos y su dictamen anterior y pedir una versión completa nueva, con un máximo de 2 vueltas. Si sigue fallando, SHALL descartar las hipótesis con citas inválidas, pasar a recomendación de inspección y el caso SHALL ir al panel mostrando las citas rechazadas en la verificación. Una salida que no valida contra el schema (incluida una hipótesis con `citas` vacías) SHALL tener un único reintento de formato, que no cuenta como vuelta del verificador.
 
 #### Scenario: Dos rechazos seguidos
 - **WHEN** el verificador rechaza el dictamen dos veces
-- **THEN** no hay una tercera llamada al Mediador, la recomendación es inspección y el panel muestra las citas rechazadas
+- **THEN** no hay una tercera llamada al Mediador, la recomendación es inspección, las hipótesis con citas inválidas se descartan y el panel muestra las citas rechazadas en la verificación
 
 #### Scenario: Formato inválido
 - **WHEN** el modelo devuelve dos veces seguidas una salida que no es un `Dictamen` válido

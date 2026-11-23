@@ -11,7 +11,7 @@ Buena parte del flujo ya existe y este change no lo reconstruye:
   borrador) y el `interrupt` del panel.
 - **Verificador de citas** (`eliseo/verificador`, agente-documental): existencia y vigencia de `REG-`,
   `ACTA-` y `PREC-` a una fecha.
-- **Panel** (panel-admin-ejecucion): marca con ✗ las citas que no pasaron el verificador.
+- **Panel** (panel-admin-ejecucion): muestra el borrador, sus fuentes y las citas rechazadas de `verificacion["fallas"]` (`fallback_inspeccion` descarta del dictamen las hipótesis con citas inválidas).
 - **Escritura del precedente** (`eliseo/ejecucion._precedente`): solo al aprobar o modificar, con
   procedencia e idempotente por dictamen.
 - **Contrato** `Dictamen` / `Hipotesis` / `Recomendacion` (`eliseo/schemas/dictamen.py`) y el prompt
@@ -50,7 +50,9 @@ escritura que ya hace `a_aprobacion`. Si la salida la consume código, va con sc
 ### D2. Modelo de razonamiento, medido contra gpt-4.1
 `LLM_MODEL_REASONING` apunta a un modelo de razonamiento del proxy del ITBA (el nombre exacto se
 confirma con `/v1/models`), con `LLM_REASONING_EFFORT=medium`. `get_reasoning_model()` pasa el esfuerzo
-y no pasa `temperature`, que estos modelos rechazan; el prompt no pide "pensá paso a paso".
+solo cuando se configura un modelo de razonamiento (no al caer a `LLM_MODEL` / `gpt-4.1`, que rechaza
+`reasoning_effort`) y no pasa `temperature`, que los modelos de razonamiento rechazan; el prompt no
+pide "pensá paso a paso".
 La tarea encaja en razonamiento (varios pasos lógicos, error caro), pero se mide igual: la evaluación
 (D11) corre el mismo prompt con `LLM_MODEL` (gpt-4.1) y con el de razonamiento, y anota tasa de
 aprobación, costo y latencia. Si empatan, queda gpt-4.1.
@@ -58,10 +60,12 @@ aprobación, costo y latencia. Si empatan, queda gpt-4.1.
 razonamiento sin comparar ("el flagship es mejor" sin evaluación es una intuición cara).
 
 ### D3. Armado del contexto y prompt v2
-`prompts/mediador.v1.md` queda intacto para comparar. `prompts/mediador.v2.md` (por defecto,
-`PROMPT_MEDIADOR_VERSION=v2`) cambia:
+`prompts/mediador.v1.md` queda intacto para comparar. `prompts/mediador.v2.md` (por defecto cuando
+`PROMPT_MEDIADOR_VERSION` no está definida o vale `v2`) cambia:
 
 - Sin el bloque "Formato de salida" en JSON: el schema lo fuerza la API.
+- Sin pedirle que agregue "las fuentes al final" en `mensaje_vecino`: `ejecucion.mensaje_aprobado` ya
+  agrega `Fuente: ...` automáticamente al aprobar (evita duplicarlo).
 - Orden del contexto: `<criterios>` → `<reglamento>` y `<actas>` (el paquete de Documental) →
   `<precedentes>` (con fecha) → `<relato_vecino>` → `<caso>` (datos estructurados del `Caso`). La
   evidencia va antes que el relato para no "perderla en el medio" y para que la opinión del vecino no
@@ -70,29 +74,42 @@ razonamiento sin comparar ("el flagship es mejor" sin evaluación es una intuici
   hecho.
 - Aviso explícito de que el contenido puede traer etiquetas falsificadas.
 - Cada precedente es un antecedente, no una norma: la norma es el artículo vigente (D10).
+- Aclaración explícita de que los artículos del paquete pueden no aplicar al reclamo (p. ej. un
+  reclamo de portero eléctrico que recibe artículos de cañerías): si nada aplica, devuelve `hipotesis`
+  vacía y `inspeccion`.
 
 Todo texto que se inyecta (relato, fuentes, precedentes, criterios) pasa por `escapar()`, que
 neutraliza `<` y `>` para que nadie pueda cerrar una etiqueta desde adentro del dato.
 *Alternativa descartada:* editar v1 en su lugar; se pierde la línea de base para la comparación v1/v2
 que pide la tarea 4.5 de panel-admin-ejecucion.
 
-### D4. Tres clases de validación, en orden
-Después de cada respuesta del modelo, en este orden y frenando en la primera que falla:
+### D4. Validación por código y guarda de recomendación
+Después de cada respuesta del modelo, en este orden:
 
-| Clase | Qué detecta | Dónde |
+| Paso | Qué detecta / hace | Dónde |
 | --- | --- | --- |
-| schema | La salida no valida contra `Dictamen` | `with_structured_output` + Pydantic (D5) |
-| no provista | Un id bien formado que no estaba en el paquete de Documental ni en los precedentes recibidos | nodo `verificar_dictamen` del Mediador |
-| semántica | El id no existe o no está vigente a hoy; o la recomendación viola la regla | verificador de citas; guarda de recomendación |
+| 1. schema | La salida no valida contra `Dictamen`, incluida cualquier hipótesis con `citas` vacías (corta con reintento de formato, D5) | `with_structured_output` + Pydantic (`eliseo/schemas/dictamen.py`) |
+| 2. guarda de recomendación | `asignar` contradicho por otra hipótesis con cita y distinto responsable → reemplaza por `inspeccion` antes del verificador | nodo `mediador` |
+| 3. verificación de citas | Citas ausentes del contexto recibido (`"cita no provista en el contexto"`), o citas inexistentes/no vigentes | nodo `verificar_dictamen` + `verificador.verificar_dictamen` |
 
-La **guarda de recomendación** es código: si `recomendacion.tipo == "asignar"` y hay otra hipótesis
-con al menos una cita y distinto `responsable`, se reemplaza por `inspeccion` con una `accion` que dice
-qué revisar, y queda registrado en el dictamen (`afirmaciones_sin_evidencia` no se toca). Los criterios
-de la administración son texto libre: no se pueden chequear con código y se miden en la evaluación.
+La **guarda de recomendación** es código y corre antes de `verificar_dictamen`: si
+`recomendacion.tipo == "asignar"` y existe otra hipótesis con al menos una cita y distinto
+`responsable` (o la hipótesis elegida no tiene citas), reemplaza `recomendacion` por
+`Recomendacion(tipo="inspeccion", hipotesis=None, accion=...)` indicando qué revisar, reemplaza
+`mensaje_vecino` por un aviso neutral de inspección (para no dejar una asignación de culpa en el texto
+al vecino) y lo registra en el log (`afirmaciones_sin_evidencia` no se toca). Los criterios de la
+administración son texto libre: no se pueden chequear con código y se miden en la evaluación.
 
-El nodo `verificar_dictamen` propio reemplaza al stub: llama a `verificador.verificar_dictamen` y suma
-las fallas `cita no provista en el contexto`, con la misma forma `{"hipotesis", "cita", "motivo"}`, así
+El nodo `verificar_dictamen` propio reemplaza al stub: para cada cita de cada hipótesis, si no estaba
+en el paquete de Documental ni en los precedentes recibidos agrega
+`{"hipotesis", "cita", "motivo": "cita no provista en el contexto"}` y **solo** sobre las citas provistas
+llama a `verificador.verificar_dictamen` (así una cita inexistente y no provista como `REG-99` no
+genera fallas duplicadas). Todas las fallas comparten la forma `{"hipotesis", "cita", "motivo"}`, así
 `fallback_inspeccion` y el panel las tratan igual que al resto. El verificador archivado no cambia.
+La regla "sin cita no hay hipótesis" se hace cumplir en el validador de `Hipotesis.citas` en
+`eliseo/schemas/dictamen.py` (sin `min_length` en el JSON schema por compatibilidad con structured
+outputs): así nunca llega una hipótesis sin citas a `fallback_inspeccion` (que descarta por
+intersección de citas).
 *Alternativa descartada:* confiar en que el prompt respete la regla; el prompt no es un límite (clase 4).
 
 ### D5. Reintentos
@@ -125,18 +142,23 @@ Es memoria procedimental versionada en git, revisada como cualquier otro cambio.
 criterios son los mismos.
 
 ### D8. Búsqueda de precedentes
-`get_precedentes(consorcio_id, unidad_id, tipo, descripcion)` es código, sin LLM:
+`get_precedentes(consorcio_id, unidad_id, tipo, descripcion)` es código, sin LLM. El nodo `precedentes`
+infiere `tipo` desde el `Caso` reutilizando el mismo clasificador que `ejecucion._tipo_reclamo`
+(`"filtracion"` u `"otro"`, promovido a función compartida):
 
 1. Consulta a Pinecone, namespace `precedentes`, por similitud con la descripción del reclamo, con
    filtro de metadata `filtro_consorcio(consorcio_id)` más `tipo` cuando se conoce. Los ids los fija el
    código desde el estado del grafo, nunca el LLM. `top_k = 10`.
-2. Rerank con `bge-reranker-v2-m3` (`rerank_pinecone`, el mismo de Documental).
-3. Los de la misma columna que la unidad del reclamo suben al principio, sin descartar los demás.
-4. Se devuelven hasta 3 por encima de `PRECEDENTES_UMBRAL_RERANK`, que se calibra en la evaluación de
-   recuperación (D11), igual que `DOCUMENTAL_UMBRAL_RERANK`.
+2. Rerank con `bge-reranker-v2-m3` (`rerank_pinecone`, el mismo de Documental) con
+   `top_n = len(candidatos)` para no truncar antes del boost, y filtro por encima de
+   `PRECEDENTES_UMBRAL_RERANK` (calibrado en D11, igual que `DOCUMENTAL_UMBRAL_RERANK`).
+3. Los de la misma columna que la unidad del reclamo suben al principio (orden estable por score), sin
+   descartar los demás, y se devuelven hasta 3, hidratados desde SQLite por `prec_id` para garantizar la
+   misma forma de dict en ambos caminos.
 
-Sin API key de Pinecone (tests, CI): SQLite con los mismos filtros, misma columna primero y después más
-nuevo. Los scenarios de la spec pasan con los dos caminos.
+Sin API key de Pinecone (tests, CI) o si Pinecone falla en runtime: SQLite con los mismos filtros
+(`consorcio_id` y `tipo`), misma columna primero y después más nuevo. Los scenarios de la spec pasan con
+los dos caminos.
 *Alternativas descartadas:* solo SQLite con palabras clave (sin memoria semántica); solo candidatos de
 SQLite más rerank, sin índice: más simple y sin sincronización, pero no escala si un consorcio acumula
 miles de precedentes, y nada en el DISCOVERY acota ese volumen.
@@ -144,10 +166,11 @@ miles de precedentes, y nada en el DISCOVERY acota ese volumen.
 ### D9. Escritura de precedentes: SQLite es la verdad, Pinecone es una copia
 - `scripts/ingest.py` también ingesta los precedentes de SQLite del consorcio en el namespace
   `precedentes` (record id = `<consorcio_id>:<prec_id>`, texto = descripción + resolución, metadata
-  `consorcio_id`, `unidad_id`, `tipo`, `ubicacion`, `fecha`), y borra los que ya no están en SQLite.
-  Es idempotente, como la ingesta de documentos.
-- Al aprobar, `ejecucion._precedente` inserta en SQLite (ya lo hace) y después hace upsert de ese record
-  en Pinecone. Si el upsert falla, la aprobación sigue: se loguea y correr `ingest.py` lo repara.
+  `prec_id`, `consorcio_id`, `unidad_id`, `tipo`, `ubicacion`, `fecha`, omitiendo campos `None`), y
+  borra los que ya no están en SQLite. Es idempotente, como la ingesta de documentos.
+- Al aprobar, `ejecucion._precedente` inserta en SQLite (ya lo hace) y, si `hay_pinecone()`, hace
+  upsert de ese record en Pinecone. Si el upsert falla, la aprobación sigue: se loguea y correr
+  `ingest.py` lo repara.
 *Alternativa descartada:* indexar solo en batch; la spec pide que el precedente aparezca en las consultas
 siguientes del mismo consorcio.
 

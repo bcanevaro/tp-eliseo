@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Tool de precedentes, no agente
-La consulta de precedentes SHALL ser una tool `get_precedentes(consorcio_id, unidad_id, tipo, descripcion)` sin LLM, que combina filtros estructurados (consorcio y tipo de reclamo) con similitud semántica sobre la descripción del reclamo y un rerank, prioriza los de la misma columna o ubicación, y devuelve los precedentes con su id `PREC-<n>`, resumen, resolución y fecha. El consorcio SHALL fijarlo el código desde el estado del grafo, nunca el LLM. Sin acceso a Pinecone SHALL responder desde la base con los mismos filtros.
+La consulta de precedentes SHALL ser una tool `get_precedentes(consorcio_id, unidad_id, tipo, descripcion)` sin LLM, que combina filtros estructurados (consorcio y tipo de reclamo) con similitud semántica sobre la descripción del reclamo y un rerank, prioriza los de la misma columna o ubicación, y devuelve los precedentes con su id `PREC-<n>`, descripción, resolución y fecha. El consorcio SHALL fijarlo el código desde el estado del grafo, nunca el LLM. Sin acceso a Pinecone SHALL responder desde la base con los mismos filtros.
 
 #### Scenario: Filtración en la misma columna
 - **WHEN** se consultan precedentes para una filtración en el 4°B

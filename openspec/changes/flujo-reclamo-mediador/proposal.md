@@ -8,7 +8,7 @@ Es el momento de IA central del producto y la parte cara que nadie automatiza: d
 - Guardas por código sobre la salida: la regla de recomendación y el rechazo de citas que no estaban en el contexto recibido.
 - Modo sin LLM (`MEDIADOR_MODO=codigo`) para tests, CI y caídas del proxy.
 - Criterios procedimentales de la administración como memoria editable (archivo por administración) que se inyecta en el prompt.
-- Tool `get_precedentes(consorcio, unidad, tipo, descripcion)` sobre la memoria episódica (Pinecone namespace `precedentes` más la tabla de la base como fuente de verdad), con filtros estructurados, similitud y rerank.
+- Tool `get_precedentes(consorcio_id, unidad_id, tipo, descripcion)` sobre la memoria episódica (Pinecone namespace `precedentes` más la tabla de la base como fuente de verdad), con filtros estructurados, similitud y rerank.
 - Escritura de precedentes solo desde decisiones aprobadas, con procedencia, en la base y en el índice.
 - Reintento del Mediador con los motivos del verificador. El loop (máximo 2 vueltas) y el fallback a inspección ya están en el grafo de caso.
 - Reemplaza los stubs `precedentes`, `mediador` y `verificar_dictamen` del bootstrap.
