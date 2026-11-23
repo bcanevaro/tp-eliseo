@@ -227,7 +227,8 @@ def precedentes(state: dict) -> dict:
 def mediador(state: dict) -> dict:
     caso, doc = state["caso"], state["documental"]
     refs = [c.referencia for c in doc.citas] if doc else []
-    precs = [p["prec_id"] for p in state.get("precedentes", [])]
+    # Solo los precedentes resueltos contra el consorcio respaldan la hipótesis de la montante.
+    precs = [p["prec_id"] for p in state.get("precedentes", []) if p.get("responsable") == "consorcio"]
     hipotesis = []
     if "REG-15" in refs:
         hipotesis.append(Hipotesis(

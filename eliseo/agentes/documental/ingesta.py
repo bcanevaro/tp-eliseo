@@ -40,27 +40,32 @@ def records(corpus: Corpus) -> list[dict]:
     return [a_record(doc) for doc in corpus]
 
 
-def _ids_existentes(index, consorcio_id: str) -> set[str]:
-    return {i for lote in index.list(prefix=f"{consorcio_id}:", namespace=NS_DOCUMENTOS) for i in lote}
+def _ids_existentes(index, consorcio_id: str, namespace: str = NS_DOCUMENTOS) -> set[str]:
+    return {i for lote in index.list(prefix=f"{consorcio_id}:", namespace=namespace) for i in lote}
 
 
-def ingerir(consorcio_id: str, index=None, espera_max: float = 60) -> dict:
-    """Upsert idempotente de todo el corpus del consorcio; borra los records que ya no están
-    en el corpus y espera a que el índice muestre exactamente los records esperados."""
-    index = index or get_index(crear=True)
-    nuevos = records(cargar_corpus(consorcio_id))
+def sincronizar(index, namespace: str, consorcio_id: str, nuevos: list[dict], espera_max: float = 60) -> dict:
+    """Upsert idempotente de `nuevos` en el namespace; borra los records del consorcio que ya no
+    están y espera a que el índice muestre exactamente los records esperados. La usa también la
+    ingesta de precedentes."""
     for i in range(0, len(nuevos), LOTE):
-        index.upsert_records(NS_DOCUMENTOS, nuevos[i:i + LOTE])
+        index.upsert_records(namespace, nuevos[i:i + LOTE])
 
     esperados = {r["_id"] for r in nuevos}
-    sobrantes = _ids_existentes(index, consorcio_id) - esperados
+    sobrantes = _ids_existentes(index, consorcio_id, namespace) - esperados
     if sobrantes:
-        index.delete(ids=list(sobrantes), namespace=NS_DOCUMENTOS)
+        index.delete(ids=list(sobrantes), namespace=namespace)
 
     limite = time.monotonic() + espera_max
-    while (presentes := _ids_existentes(index, consorcio_id)) != esperados:
+    while (presentes := _ids_existentes(index, consorcio_id, namespace)) != esperados:
         if time.monotonic() > limite:
             raise TimeoutError(f"Pinecone muestra {len(presentes)} records de {len(esperados)} esperados")
         time.sleep(2)
-    log.info("Ingeridos %d records de %s", len(esperados), consorcio_id)
+    log.info("Ingeridos %d records de %s en %s", len(esperados), consorcio_id, namespace)
     return {"consorcio_id": consorcio_id, "records": len(esperados), "borrados": len(sobrantes)}
+
+
+def ingerir(consorcio_id: str, index=None, espera_max: float = 60) -> dict:
+    """Ingesta del corpus del consorcio en el namespace de documentos (ver `sincronizar`)."""
+    index = index or get_index(crear=True)
+    return sincronizar(index, NS_DOCUMENTOS, consorcio_id, records(cargar_corpus(consorcio_id)), espera_max)

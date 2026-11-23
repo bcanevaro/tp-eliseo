@@ -13,8 +13,13 @@ def sin_red(request, monkeypatch):
     if request.node.get_closest_marker("pinecone"):
         yield
         return
+    from eliseo import config
     from eliseo.agentes.documental import retriever
 
+    # Sin Pinecone aunque el .env tenga la key: se carga el .env antes de borrarla, así
+    # load_dotenv (que corre una sola vez) no la vuelve a poner durante el test.
+    config._cargar()
+    monkeypatch.delenv("PINECONE_API_KEY", raising=False)
     monkeypatch.setenv("DOCUMENTAL_MODO", "retriever")
     monkeypatch.setenv("GASTOS_MODO", "codigo")
     monkeypatch.setenv("INTAKE_MODO", "reglas")

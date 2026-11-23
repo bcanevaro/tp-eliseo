@@ -12,6 +12,7 @@ La estructura del grafo (qué nodo sigue a cuál) vive en conversacion.py y caso
 from eliseo import ejecucion
 from eliseo.agentes.documental import nodos as documental
 from eliseo.agentes.gastos import nodos as gastos
+from eliseo.agentes.mediador import nodos as mediador
 from eliseo.intake import intake
 from eliseo.grafo import stubs
 
@@ -36,7 +37,7 @@ NODOS_CASO = {
     # agente-documental
     "documental_caso": documental.documental_caso,
     # flujo-reclamo-mediador
-    "precedentes": stubs.precedentes,
+    "precedentes": mediador.precedentes,
     "mediador": stubs.mediador,
     "verificar_dictamen": stubs.verificar_dictamen,
     # panel-admin-ejecucion

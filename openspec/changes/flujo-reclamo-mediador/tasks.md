@@ -1,10 +1,10 @@
 ## 1. Precedentes
 
-- [ ] 1.1 `eliseo/agentes/mediador/precedentes.py`: `get_precedentes(consorcio_id, unidad_id, tipo, descripcion)` con Pinecone (filtro de metadata `consorcio_id` + `tipo`, `top_k=10`), rerank (`top_n=len(candidatos)`), umbral `PRECEDENTES_UMBRAL_RERANK`, boost por columna, top 3 e hidratación desde SQLite; si Pinecone falla en runtime, degrada a SQLite (D8)
-- [ ] 1.2 Camino sin Pinecone: SQLite con los mismos filtros (`consorcio_id` y `tipo` inferido desde el `Caso`, compartiendo el clasificador con `ejecucion`), misma columna primero y después más nuevo (D8)
-- [ ] 1.3 Ingesta de precedentes en el namespace `precedentes` desde SQLite (metadata con `prec_id`, omitiendo valores `None`), idempotente y borrando sobrantes; `scripts/ingest.py` la corre junto con la de documentos (D9)
-- [ ] 1.4 Upsert del precedente en Pinecone desde `ejecucion._precedente` después del insert en SQLite (solo si `hay_pinecone()`); si falla, loguea y la aprobación sigue (D9)
-- [ ] 1.5 Reemplazar el stub `precedentes` en `nodos.py`
+- [x] 1.1 `eliseo/agentes/mediador/precedentes.py`: `get_precedentes(consorcio_id, unidad_id, tipo, descripcion)` con Pinecone (filtro de metadata `consorcio_id` + `tipo`, `top_k=10`), rerank (`top_n=len(candidatos)`), umbral `PRECEDENTES_UMBRAL_RERANK`, boost por columna, top 3 e hidratación desde SQLite; si Pinecone falla en runtime, degrada a SQLite (D8)
+- [x] 1.2 Camino sin Pinecone: SQLite con los mismos filtros (`consorcio_id` y `tipo` inferido desde el `Caso`, compartiendo el clasificador con `ejecucion`), misma columna primero y después más nuevo (D8)
+- [x] 1.3 Ingesta de precedentes en el namespace `precedentes` desde SQLite (metadata con `prec_id`, omitiendo valores `None`), idempotente y borrando sobrantes; `scripts/ingest.py` la corre junto con la de documentos (D9)
+- [x] 1.4 Upsert del precedente en Pinecone desde `ejecucion._precedente` después del insert en SQLite (solo si `hay_pinecone()`); si falla, loguea y la aprobación sigue (D9)
+- [x] 1.5 Reemplazar el stub `precedentes` en `nodos.py`
 
 ## 2. Criterios y prompt
 

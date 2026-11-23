@@ -14,15 +14,13 @@ import re
 from typing import Callable
 
 from eliseo import textos
+from eliseo.agentes.mediador import precedentes
 from eliseo.config import env
-from eliseo.formato import normalizar
 from eliseo.plataforma import escritura, lectura
 from eliseo.plataforma.db import get_conn
 from eliseo.schemas import Caso, Dictamen, EstadoCaso, MensajeSaliente
 
 log = logging.getLogger(__name__)
-
-_FILTRACION = ["humedad", "filtra", "gotea", "goteo", "llueve", "mancha", "agua", "perdida"]
 
 
 def con_fuentes(texto: str, refs: list[str]) -> str:
@@ -44,11 +42,6 @@ def tipo_pedido(dictamen: Dictamen) -> str:
     return "inspeccion" if dictamen.recomendacion.tipo == "inspeccion" else "trabajo"
 
 
-def _tipo_reclamo(caso: Caso) -> str:
-    texto = normalizar(f"{caso.reclamo.descripcion} {caso.reclamo.ambiente or ''}")
-    return "filtracion" if caso.reclamo.gotea or any(p in texto for p in _FILTRACION) else "otro"
-
-
 def _precedente(conn, caso: Caso, dictamen: Dictamen, dictamen_id: int, admin_id: str, modificado: bool) -> str:
     rec = dictamen.recomendacion
     if rec.tipo == "asignar":
@@ -61,13 +54,15 @@ def _precedente(conn, caso: Caso, dictamen: Dictamen, dictamen_id: int, admin_id
         resolucion += f" ({', '.join(citas)})"
     columna = caso.unidad_id[-1]
     prec_id, _ = escritura.crear_precedente(
-        conn, consorcio_id=caso.consorcio_id, unidad_id=caso.unidad_id, tipo=_tipo_reclamo(caso),
+        conn, consorcio_id=caso.consorcio_id, unidad_id=caso.unidad_id, tipo=precedentes.tipo_reclamo(caso),
         ubicacion=f"columna {columna}, {caso.reclamo.ambiente}" if caso.reclamo.ambiente else f"columna {columna}",
         descripcion=f"{caso.reclamo.descripcion} ({caso.reclamo.ambiente or 'ambiente sin indicar'})",
         resolucion=resolucion, responsable=responsable, caso_id=caso.caso_id, dictamen_id=dictamen_id,
         procedencia=f"caso {caso.caso_id}, dictamen {dictamen_id}, "
                     f"{'modificado y aprobado' if modificado else 'aprobado'} por {admin_id}",
     )
+    # SQLite es la verdad; la copia en Pinecone es best effort y no bloquea la aprobación (design D9).
+    precedentes.indexar(conn, caso.consorcio_id, prec_id)
     return prec_id
 
 
