@@ -8,11 +8,11 @@
 
 ## 2. Criterios y prompt
 
-- [ ] 2.1 `data/administraciones/administracion-mendez/criterios.md` con los tres criterios de D7
-- [ ] 2.2 Carga de criterios por `normalizar(consorcio.administracion).replace(" ", "-")`, con aviso si falta el archivo (D7)
-- [ ] 2.3 `prompts/mediador.v2.md` con los cambios de D3; v1 queda intacto; entrada en `prompts/CHANGELOG.md`
-- [ ] 2.4 `escapar()` para todo texto inyectado (relato, fuentes, precedentes, criterios) (D3)
-- [ ] 2.5 `.env.example`: `LLM_MODEL_REASONING`, `LLM_REASONING_EFFORT=medium`, `MEDIADOR_MODO=agente`, `PROMPT_MEDIADOR_VERSION=v2`, `PRECEDENTES_UMBRAL_RERANK`
+- [x] 2.1 `data/administraciones/administracion-mendez/criterios.md` con los tres criterios de D7
+- [x] 2.2 Carga de criterios por `normalizar(consorcio.administracion).replace(" ", "-")`, con aviso si falta el archivo (D7)
+- [x] 2.3 `prompts/mediador.v2.md` con los cambios de D3; v1 queda intacto; entrada en `prompts/CHANGELOG.md`
+- [x] 2.4 `escapar()` para todo texto inyectado (relato, fuentes, precedentes, criterios) (D3)
+- [x] 2.5 `.env.example`: `LLM_MODEL_REASONING`, `LLM_REASONING_EFFORT=medium`, `MEDIADOR_MODO=agente`, `PROMPT_MEDIADOR_VERSION=v2`, `PRECEDENTES_UMBRAL_RERANK`
 
 ## 3. Agente Mediador
 

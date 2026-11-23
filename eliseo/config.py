@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 RAIZ = Path(__file__).resolve().parent.parent
 DATA_DIR = RAIZ / "data"
 CONSORCIOS_DIR = DATA_DIR / "consorcios"
+ADMINISTRACIONES_DIR = DATA_DIR / "administraciones"
 PROMPTS_DIR = RAIZ / "prompts"
 
 
