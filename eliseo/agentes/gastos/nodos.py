@@ -47,7 +47,7 @@ def gastos(state: dict) -> dict:
             return {"gastos": correr_agente(ident, msg.texto, modelo)}
         except MontoNoRespaldado as e:
             log.warning("Gastos: respuesta descartada (%s); uso el modo sin LLM", e)
-        except (openai.APIError, ValidationError) as e:
+        except (openai.OpenAIError, ValidationError) as e:  # OpenAIError incluye LengthFinishReasonError
             log.warning("Gastos: el agente falló (%s); uso el modo sin LLM", e)
     return {"gastos": respuesta_codigo(ident, msg.texto)}
 

@@ -1,5 +1,6 @@
 """Specs agente-gastos y motor-reglas. Sin red ni LLM (el agente se prueba con un modelo falso)."""
 from decimal import Decimal
+from types import SimpleNamespace
 
 import pytest
 from langchain_core.messages import AIMessage
@@ -154,8 +155,9 @@ class _ModeloFalso:
     def bind_tools(self, tools):
         return self
 
-    def with_structured_output(self, schema):
+    def with_structured_output(self, schema, method=None):
         modelo = self
+        self.metodo = method
 
         class _S:
             def invoke(self, _):
@@ -173,6 +175,28 @@ def test_agente_con_montos_respaldados(ident, db_path):
     final = RespuestaGastos(respuesta="Subió $ 615.000,00 por dos arreglos.", lineas=[
         LineaGasto(concepto="Montante B", monto=Decimal("340000.00"), comprobante="FAC-0107")])
     assert agente.correr_agente(ident, "¿por qué subió?", _ModeloFalso(final)) == final
+
+
+def test_agente_usa_function_calling(ident, db_path):
+    # json_schema estricto no soporta el `pattern` de Decimal: con el proxy real cortaba con 0 tokens.
+    modelo = _ModeloFalso(RespuestaGastos(respuesta="Sin cambios.", lineas=[]))
+    agente.correr_agente(ident, "¿por qué subió?", modelo)
+    assert modelo.metodo == "function_calling"
+
+
+def test_corte_por_longitud_cae_al_modo_sin_llm(bot, monkeypatch):
+    import openai
+
+    class _Corta(_ModeloFalso):
+        def with_structured_output(self, schema, method=None):
+            class _S:
+                def invoke(self, _):
+                    raise openai.LengthFinishReasonError(completion=SimpleNamespace(usage=None))
+            return _S()
+
+    monkeypatch.setenv("GASTOS_MODO", "agente")
+    monkeypatch.setattr(nodos, "_modelo", lambda: _Corta(None))
+    assert "$ 615.000,00" in bot("¿Por qué subió la expensa de octubre?")
 
 
 def test_agente_que_inventa_un_monto_cae_al_modo_sin_llm(bot, monkeypatch):

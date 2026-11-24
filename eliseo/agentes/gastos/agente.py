@@ -79,7 +79,11 @@ def correr_agente(ident: Identidad, pregunta: str, modelo) -> RespuestaGastos:
             tool = por_nombre.get(llamada["name"])
             salida = tool.invoke(llamada["args"]) if tool else f"No existe la tool {llamada['name']}."
             mensajes.append(ToolMessage(content=str(salida), tool_call_id=llamada["id"]))
-    respuesta = modelo.with_structured_output(RespuestaGastos).invoke([*mensajes, HumanMessage(PEDIR_FINAL)])
+    # function_calling y no json_schema (el default): el modo estricto no soporta el `pattern` que Pydantic
+    # genera para `Decimal` (LineaGasto.monto) y el proxy corta con 0 tokens (LengthFinishReasonError).
+    # Los montos igual se validan contra lo que devolvieron las tools (`validar`).
+    respuesta = (modelo.with_structured_output(RespuestaGastos, method="function_calling")
+                 .invoke([*mensajes, HumanMessage(PEDIR_FINAL)]))
     if errores := validar(respuesta, registro):
         raise MontoNoRespaldado("; ".join(errores))
     log.info("Gastos: %d llamadas a tools", registro.llamadas)
