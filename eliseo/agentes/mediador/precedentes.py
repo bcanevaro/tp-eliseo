@@ -33,7 +33,7 @@ def tipo_reclamo(caso: Caso) -> str:
 
 def umbral() -> float:
     """Score mínimo del reranker (se calibra en la evaluación de recuperación)."""
-    return float(env("PRECEDENTES_UMBRAL_RERANK", default="0.1"))
+    return float(env("PRECEDENTES_UMBRAL_RERANK", default="0.002"))
 
 
 def _columna(p: dict) -> str | None:

@@ -32,14 +32,14 @@
 - [x] 4.3 `tests/test_mediador.py` con un modelo falso: humedad en el 4°B (dos hipótesis, `inspeccion`, mensaje sin culpa); caso sin artículo aplicable; instrucción oculta en el relato; dos hipótesis con cita → `inspeccion`; la guarda corrige un `asignar` contradicho o sin citas (y deja `mensaje_vecino` neutral); criterio de inspección previa en el prompt; cita no provista rechazada (y sin duplicar con cita inexistente); hipótesis sin citas rechazada; formato inválido → reparación → modo `codigo`; el reintento recibe las fallas
 - [x] 4.4 `tests/test_grafo.py`: dos rechazos seguidos → no hay tercera llamada al Mediador, la recomendación es `inspeccion`, el dictamen guardado descarta las hipótesis inválidas y `verificacion["fallas"]` registra las citas rechazadas
 - [x] 4.5 `escapar()`: un relato con `</relato_vecino>` no cierra la etiqueta
-- [ ] 4.6 Test marcado `pinecone` (corre solo con API key): ingesta de precedentes y consulta real de 4°B
+- [x] 4.6 Test marcado `pinecone` (corre solo con API key): ingesta de precedentes y consulta real de 4°B
 
 ## 5. Evaluación (LangSmith)
 
-- [ ] 5.1 `evaluation/mediador/eval_mediador.py` con los 5 casos y los evaluadores estructura, factualidad, terminologia, neutralidad y fidelidad; `--langsmith` sube el experimento (D11)
-- [ ] 5.2 Evaluación de recuperación de precedentes (precisión y recall) y calibración de `PRECEDENTES_UMBRAL_RERANK`
-- [ ] 5.3 Revisar a mano los puntajes de los jueces sobre los 5 casos antes de usarlos
-- [ ] 5.4 Correr con el proxy real: gpt-4.1 contra el modelo de razonamiento (D2) y elegir `LLM_MODEL_REASONING`
-- [ ] 5.5 Correr v1 contra v2 del prompt y comparar en LangSmith (insumo de la tarea 4.5 de panel-admin-ejecucion)
-- [ ] 5.6 Anotar los resultados en `evaluation/mediador/RESULTADOS.md`; cada falla nueva se agrega como caso antes de tocar el prompt
-- [ ] 5.7 Correr `evaluation/e2e/correr.py` y confirmar que `uso-03`, `borde-04` y `neg-05` pasan con el Mediador real (ya los cubre)
+- [x] 5.1 `evaluation/mediador/eval_mediador.py` con los 5 casos y los evaluadores estructura, factualidad, terminologia, neutralidad y fidelidad; `--langsmith` sube el experimento (D11)
+- [x] 5.2 Evaluación de recuperación de precedentes (precisión y recall) y calibración de `PRECEDENTES_UMBRAL_RERANK`
+- [x] 5.3 Revisar a mano los puntajes de los jueces sobre los 5 casos antes de usarlos
+- [x] 5.4 Correr con el proxy real: gpt-4.1 contra el modelo de razonamiento (D2) y elegir `LLM_MODEL_REASONING`
+- [x] 5.5 Correr v1 contra v2 del prompt y comparar en LangSmith (insumo de la tarea 4.5 de panel-admin-ejecucion)
+- [x] 5.6 Anotar los resultados en `evaluation/mediador/RESULTADOS.md`; cada falla nueva se agrega como caso antes de tocar el prompt
+- [x] 5.7 Correr `evaluation/e2e/correr.py` y confirmar que `uso-03`, `borde-04` y `neg-05` pasan con el Mediador real (ya los cubre) — `e2e-c4333d40`: borde-04 y neg-05 3/3; uso-03 2/3 (una repetición omitió ACTA-2025-03-14#2, ver evaluation/e2e/RESULTADOS.md)
