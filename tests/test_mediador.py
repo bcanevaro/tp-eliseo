@@ -280,3 +280,10 @@ def test_modelo_de_razonamiento_recibe_reasoning_effort(monkeypatch):
 
     monkeypatch.setenv("LLM_MODEL_REASONING", "gpt-4.1")  # comparación de la evaluación (D2)
     assert "reasoning_effort" not in llm.get_reasoning_model()._default_params
+
+
+def test_el_prefijo_del_proxy_no_engana_a_es_razonamiento():
+    # El proxy nombra los modelos como `openai/gpt-4.1`: sin quitar el prefijo, gpt-4.1 recibiría reasoning_effort.
+    assert not llm.es_razonamiento("openai/gpt-4.1")
+    assert not llm.es_razonamiento("gpt-4.1-mini")
+    assert llm.es_razonamiento("openai/gpt-5.6") and llm.es_razonamiento("openai/o3")

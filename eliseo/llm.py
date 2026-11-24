@@ -29,8 +29,9 @@ def get_model(temperature: float = 0) -> ChatOpenAI:
 
 
 def es_razonamiento(modelo: str) -> bool:
-    """Los gpt-3.x / gpt-4.x (gpt-4.1, gpt-4o…) no aceptan reasoning_effort."""
-    return not modelo.lower().startswith(("gpt-3", "gpt-4"))
+    """Los gpt-3.x / gpt-4.x (gpt-4.1, gpt-4o…) no aceptan reasoning_effort. El proxy también
+    nombra los modelos con el proveedor adelante (`openai/gpt-4.1`): se compara sin el prefijo."""
+    return not modelo.lower().rsplit("/", 1)[-1].startswith(("gpt-3", "gpt-4"))
 
 
 def get_reasoning_model() -> ChatOpenAI:
