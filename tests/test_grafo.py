@@ -191,3 +191,44 @@ def test_mediador_con_citas_invalidas_pasa_a_inspeccion(bot, monkeypatch):
     assert len(llamadas) == 2 and llamadas[1]["fallas"][0]["cita"] == "REG-99"  # la 2.ª vuelta recibe los motivos
     assert "C" not in {h.id for h in dictamen.hipotesis}
     assert dictamen.recomendacion.tipo == "inspeccion"
+
+
+# Requirement: Loop con el verificador — Scenario: Dos rechazos seguidos (Mediador real con un modelo falso)
+def test_dos_rechazos_no_hay_tercera_llamada_y_el_panel_ve_las_fallas(bot, monkeypatch):
+    import json
+
+    from eliseo import llm
+    from eliseo.agentes.mediador.nodos import NO_PROVISTA
+    from eliseo.schemas import Dictamen
+
+    llamadas = []
+
+    class ModeloFalso:
+        def with_structured_output(self, schema):
+            return self
+
+        def invoke(self, mensajes):
+            llamadas.append(mensajes)
+            return Dictamen.model_validate({
+                "hechos": ["Goteo en el techo del baño"],
+                "hipotesis": [
+                    {"id": "A", "responsable": "unidad", "descripcion": "x", "citas": ["REG-15"], "confirmaria": "x"},
+                    {"id": "B", "responsable": "consorcio", "descripcion": "y", "citas": ["REG-22", "REG-99"],
+                     "confirmaria": "y"}],
+                "recomendacion": {"tipo": "asignar", "hipotesis": "A", "accion": "Que repare el 5°B"},
+                "mensaje_vecino": "Le corresponde al 5°B."})
+
+    monkeypatch.setenv("MEDIADOR_MODO", "agente")
+    monkeypatch.setattr(llm, "get_reasoning_model", ModeloFalso)
+    caso_id = _reclamo_completo(bot)
+
+    assert len(llamadas) == 2  # no hay una tercera llamada al Mediador
+    assert "<fallas>" in llamadas[1][1].content and "REG-22" in llamadas[1][1].content
+    fila = get_conn().execute("SELECT dictamen_json, verificacion_json FROM dictamenes WHERE caso_id = ? "
+                              "ORDER BY version DESC LIMIT 1", (caso_id,)).fetchone()
+    dictamen, verificacion = Dictamen.model_validate_json(fila["dictamen_json"]), json.loads(fila["verificacion_json"])
+    assert dictamen.recomendacion.tipo == "inspeccion"
+    assert [h.id for h in dictamen.hipotesis] == ["A"]  # B tenía citas rechazadas
+    assert sorted((f["cita"], f["motivo"]) for f in verificacion["fallas"]) == [
+        ("REG-22", NO_PROVISTA), ("REG-99", NO_PROVISTA)]
+    assert runtime.estado_caso(caso_id)["siguiente"] == ("panel",)

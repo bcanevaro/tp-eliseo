@@ -2,8 +2,9 @@
 
 - get_fast_model: intake y redacción de respuestas (LLM_MODEL_FAST, si falta usa LLM_MODEL).
 - get_model: agentes Documental y Gastos (LLM_MODEL).
-- get_reasoning_model: Mediador (LLM_MODEL_REASONING). No recibe temperature porque los
-  modelos de razonamiento la rechazan.
+- get_reasoning_model: Mediador (LLM_MODEL_REASONING, con LLM_REASONING_EFFORT). No recibe
+  temperature porque los modelos de razonamiento la rechazan; si cae a LLM_MODEL (gpt-4.1) tampoco
+  recibe reasoning_effort, que ese modelo rechaza (design D2 de flujo-reclamo-mediador).
 """
 from langchain_openai import ChatOpenAI
 
@@ -27,5 +28,14 @@ def get_model(temperature: float = 0) -> ChatOpenAI:
     return ChatOpenAI(model=env("LLM_MODEL"), temperature=temperature, **_proxy())
 
 
+def es_razonamiento(modelo: str) -> bool:
+    """Los gpt-3.x / gpt-4.x (gpt-4.1, gpt-4o…) no aceptan reasoning_effort."""
+    return not modelo.lower().startswith(("gpt-3", "gpt-4"))
+
+
 def get_reasoning_model() -> ChatOpenAI:
-    return ChatOpenAI(model=env("LLM_MODEL_REASONING", "LLM_MODEL"), **_proxy())
+    modelo = env("LLM_MODEL_REASONING", default="")
+    if modelo and es_razonamiento(modelo):
+        esfuerzo = env("LLM_REASONING_EFFORT", default="medium")
+        return ChatOpenAI(model=modelo, reasoning_effort=esfuerzo, **_proxy())
+    return ChatOpenAI(model=modelo or env("LLM_MODEL"), **_proxy())

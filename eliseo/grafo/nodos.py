@@ -38,8 +38,8 @@ NODOS_CASO = {
     "documental_caso": documental.documental_caso,
     # flujo-reclamo-mediador
     "precedentes": mediador.precedentes,
-    "mediador": stubs.mediador,
-    "verificar_dictamen": stubs.verificar_dictamen,
+    "mediador": mediador.mediador,
+    "verificar_dictamen": mediador.verificar_dictamen,
     # panel-admin-ejecucion
     "ejecucion": ejecucion.ejecucion,
     "rechazo": ejecucion.rechazo,

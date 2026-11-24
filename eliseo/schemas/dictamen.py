@@ -19,6 +19,10 @@ class Hipotesis(BaseModel):
     @field_validator("citas")
     @classmethod
     def _ids_canonicos(cls, citas: list[str]) -> list[str]:
+        # Sin cita no hay hipótesis. Va en el validador y no como min_length para no meterlo en el
+        # JSON schema que recibe structured outputs (design D4).
+        if not citas:
+            raise ValueError("una hipótesis tiene que tener al menos una cita")
         malas = [c for c in citas if tipo_de_referencia(c) is None]
         if malas:
             raise ValueError(f"ids de cita con formato inválido: {malas}")

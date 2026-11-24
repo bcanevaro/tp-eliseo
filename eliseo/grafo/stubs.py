@@ -21,14 +21,11 @@ from eliseo.plataforma import escritura, lectura
 from eliseo.plataforma.db import get_conn
 from eliseo.schemas import (
     Cita,
-    Dictamen,
     EstadoCaso,
-    Hipotesis,
     Intent,
     LineaGasto,
     MensajeSaliente,
     ReclamoBorrador,
-    Recomendacion,
     RespuestaDocumental,
     RespuestaGastos,
     RespuestaVecino,
@@ -225,30 +222,10 @@ def precedentes(state: dict) -> dict:
 
 
 def mediador(state: dict) -> dict:
-    caso, doc = state["caso"], state["documental"]
-    refs = [c.referencia for c in doc.citas] if doc else []
-    # Solo los precedentes resueltos contra el consorcio respaldan la hipótesis de la montante.
-    precs = [p["prec_id"] for p in state.get("precedentes", []) if p.get("responsable") == "consorcio"]
-    hipotesis = []
-    if "REG-15" in refs:
-        hipotesis.append(Hipotesis(
-            id="A", responsable="unidad", descripcion="Pérdida en una instalación de uso exclusivo de la unidad superior",
-            citas=["REG-15"], a_favor=["La mancha está debajo de otra unidad"], en_contra=[],
-            confirmaria="Prueba de la instalación de la unidad superior con la montante cerrada"))
-    a_consorcio = [r for r in refs if r == "REG-16" or r.startswith("ACTA-")] + precs
-    if a_consorcio:
-        hipotesis.append(Hipotesis(
-            id="B" if hipotesis else "A", responsable="consorcio", descripcion="Pérdida en la montante general de la columna",
-            citas=a_consorcio, a_favor=["Hay antecedentes o una obra aprobada sobre la misma columna"] if len(a_consorcio) > 1 else [],
-            en_contra=[], confirmaria="Inspección de la montante a la altura de la unidad"))
-    dictamen = Dictamen(
-        hechos=[f"{caso.reclamo.descripcion} ({caso.reclamo.ambiente or 'ambiente sin indicar'})"],
-        hipotesis=hipotesis,
-        recomendacion=Recomendacion(tipo="inspeccion", accion="Inspección de un plomero matriculado en la unidad, la superior y la montante"),
-        mensaje_vecino=(f"Revisamos tu reclamo #{caso.caso_id}. Para saber a quién le corresponde la reparación hace "
-                        "falta una inspección: te contactamos para coordinarla."),
-    )
-    return {"dictamen": dictamen}
+    # El modo sin LLM del Mediador real (eliseo/agentes/mediador/codigo.py) es este mismo stub.
+    from eliseo.agentes.mediador.codigo import dictamen_codigo
+
+    return {"dictamen": dictamen_codigo(state["caso"], state["documental"], state.get("precedentes", []))}
 
 
 def verificar_dictamen(state: dict) -> dict:
