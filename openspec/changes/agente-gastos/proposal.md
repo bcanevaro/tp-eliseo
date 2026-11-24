@@ -23,7 +23,7 @@
 
 ## Impact
 
-- **Dueño:** Integrante C.
+- **Dueño:** Bautista.
 - **Depende de:** `bootstrap-proyecto` (contratos `RespuestaGastos` y `LineaGasto`, base de la plataforma y liquidaciones de demo). **Lo usa:** `panel-admin-ejecucion` (motor).
 - **Origen:** caja "Gastos" y celda "Montos de gastos, mayorías, prorrateo" del cuadrante del artefacto; casos de test de la suba de octubre y "¿Cuánto debe el 3°A?".
 - **Dependencias nuevas:** ninguna.

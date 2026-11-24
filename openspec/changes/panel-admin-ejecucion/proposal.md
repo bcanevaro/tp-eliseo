@@ -25,7 +25,7 @@ El panel es el único approval boundary del sistema: nada que asigne responsabil
 
 ## Impact
 
-- **Dueño:** Integrante E.
+- **Dueño:** Bautista.
 - **Depende de:** `bootstrap-proyecto` (grafo de caso con `interrupt`, contratos `Dictamen` y `DecisionAdmin`), `canal-telegram-intake` (envío al vecino) y `agente-gastos` (motor, si la ejecución prorratea un trabajo). Se desarrolla contra dictámenes de fixture.
 - **Origen:** caja "Panel del administrador" y "Ejecución" del artefacto; pasos 13 a 19 del Target State Workflow; wireframes del panel; tabla de casos de test y self-check.
 - **Dependencias nuevas:** `streamlit`.

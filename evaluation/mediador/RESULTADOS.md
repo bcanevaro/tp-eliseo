@@ -1,5 +1,7 @@
 # Evaluación del Mediador
 
+Corrida y análisis: Lu.
+
 Corridas del 23/11/2026 (design D11 de `flujo-reclamo-mediador`). Todas con `PRECEDENTES_UMBRAL_RERANK=0.002` (ver la primera sección), `MEDIADOR_MODO=agente` y los precedentes ingeridos en Pinecone.
 
 ## 1. Recuperación de precedentes y calibración del umbral (tarea 5.2)

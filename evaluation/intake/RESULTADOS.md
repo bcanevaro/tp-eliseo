@@ -1,5 +1,7 @@
 # Evaluación del Intake + Router
 
+Corrida y análisis: Lu.
+
 Corrida del 23/11/2026 con `INTAKE_MODO=llm python evaluation/intake/eval_intake.py --langsmith`. Experimento de LangSmith: `intake-456663e2` (dataset `eliseo-intake`).
 
 - **Modelo:** `LLM_MODEL_FAST` (gpt-4.1-mini), prompt `intake.v1`.

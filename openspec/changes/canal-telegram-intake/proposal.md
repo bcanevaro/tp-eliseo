@@ -24,7 +24,7 @@ Es la puerta de entrada: sin canal no hay demo, y sin un intake confiable el wor
 
 ## Impact
 
-- **Dueño:** Integrante A.
+- **Dueño:** Bautista.
 - **Depende de:** `bootstrap-proyecto` (contratos, grafo de conversación y base).
 - **Origen:** cajas "Canal" e "Intake + Router" del artefacto; pasos 01 a 04 y 09 a 11 del Target State Workflow; wireframes del chat.
 - **Dependencias nuevas:** `python-telegram-bot`. Variable `TELEGRAM_BOT_TOKEN` (bot creado con BotFather).

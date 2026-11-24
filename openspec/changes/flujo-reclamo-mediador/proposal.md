@@ -26,7 +26,7 @@ Es el momento de IA central del producto y la parte cara que nadie automatiza: d
 
 ## Impact
 
-- **Dueño:** Federico Viera (Integrante D).
+- **Dueño:** Federico Viera.
 - **Depende de:** `bootstrap-proyecto` (contratos `Dictamen` y `Caso`, grafo de caso) y `agente-documental` (paquete de citas, verificador y reranker).
 - **Toca código de otros changes:** `eliseo/ejecucion` (panel-admin-ejecucion), para indexar el precedente al aprobar, y `scripts/ingest.py` (agente-documental), para ingestar los precedentes. Además `eliseo/schemas/dictamen.py` (bootstrap-proyecto, contrato compartido), para rechazar hipótesis sin citas; los dictámenes guardados que el panel relee con `Dictamen.model_validate_json` nunca tienen hipótesis sin citas, porque el stub y el fallback no las generan.
 - **Origen:** cajas "Mediador" y "Precedentes" del artefacto; prompt "Mediador" v1; casos de test de humedad en el 4°B, caso sin artículo aplicable e instrucción oculta en un documento.

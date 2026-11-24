@@ -1,5 +1,7 @@
 # Evaluación de punta a punta
 
+Corrida y análisis: Lu.
+
 Corrida del 23/11/2026 con todos los componentes con LLM:
 
 ```bash

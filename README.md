@@ -30,16 +30,16 @@ Comandos útiles: `openspec list`, `openspec view`, `openspec show <nombre>`, `o
 
 ### Changes y dueños
 
-| Change | Capabilities | Dueño | Depende de |
-|---|---|---|---|
-| `bootstrap-proyecto` ✓ | contratos-compartidos, datos-ficticios, grafo-orquestacion | Bruno | — |
-| `canal-telegram-intake` (implementado) | canal-telegram, intake-router | A | bootstrap |
-| `agente-documental` ✓ | ingesta-documental, agente-documental, verificador-citas | Bruno | bootstrap |
-| `agente-gastos` (implementado) | agente-gastos, motor-reglas | C | bootstrap |
-| `flujo-reclamo-mediador` | agente-mediador, precedentes | D | bootstrap, documental (se arranca con stubs) |
-| `panel-admin-ejecucion` (implementado) | panel-admin, ejecucion, evaluacion-e2e | E | bootstrap, canal (se arranca con fixtures) |
+| Change | Capabilities | Dueño | Colaboran | Depende de |
+|---|---|---|---|---|
+| `bootstrap-proyecto` ✓ | contratos-compartidos, datos-ficticios, grafo-orquestacion | Bruno | — | — |
+| `canal-telegram-intake` (implementado) | canal-telegram, intake-router | Bautista | Lu (evaluación) | bootstrap |
+| `agente-documental` ✓ | ingesta-documental, agente-documental, verificador-citas | Bruno | — | bootstrap |
+| `agente-gastos` (implementado) | agente-gastos, motor-reglas | Bautista | Lu (evaluación y arreglos) | bootstrap |
+| `flujo-reclamo-mediador` (implementado) | agente-mediador, precedentes | Federico | Lu (evaluación y arreglos) | bootstrap, documental (se arranca con stubs) |
+| `panel-admin-ejecucion` (implementado) | panel-admin, ejecucion, evaluacion-e2e | Bautista | Lu (evaluación) | bootstrap, canal (se arranca con fixtures) |
 
-El bootstrap deja el grafo entero corriendo con stubs, así cada uno reemplaza su nodo sin esperar a los demás. Los cinco changes de componentes ya tienen proposal y specs; cada dueño escribe su `design.md` y `tasks.md` como primer paso.
+El bootstrap deja el grafo entero corriendo con stubs, así cada uno reemplaza su nodo sin esperar a los demás. "Implementado" quiere decir que las tasks están hechas y falta archivar; ✓, que ya está archivado. Las tasks pendientes de `canal-telegram-intake` y `panel-admin-ejecucion` están en su `tasks.md`.
 
 ## Stack del MVP
 
@@ -81,12 +81,24 @@ Necesita `TELEGRAM_BOT_TOKEN` en el `.env`. En Telegram:
 
 El bot y el panel comparten `data/eliseo.db`: lo que se aprueba en el panel le llega al vecino por Telegram en unos segundos.
 
-## Evaluación de punta a punta
+## Evaluación
+
+Cada evaluación tiene su `RESULTADOS.md` con la última corrida y el experimento de LangSmith.
 
 ```bash
-python evaluation/e2e/correr.py                    # 12 casos del artefacto, evaluadores determinísticos
-python evaluation/e2e/correr.py --juez --langsmith # + juez LLM de tono y relevancia, experimento en LangSmith
-python evaluation/intake/eval_intake.py --langsmith  # intake como clasificador: precision/recall por intent y recall de urgencias
+# De punta a punta: los 12 casos del artefacto con evaluadores determinísticos
+python evaluation/e2e/correr.py
+# Con todos los componentes con LLM, juez de tono y relevancia (según los criterios de cada caso) y LangSmith
+INTAKE_MODO=llm GASTOS_MODO=agente DOCUMENTAL_MODO=agente MEDIADOR_MODO=agente \
+  python evaluation/e2e/correr.py --juez --langsmith --repeticiones 3
+
+# Por componente
+python evaluation/intake/eval_intake.py --langsmith               # precision/recall por intent y recall de urgencias
+python evaluation/documental/eval_recuperacion.py --langsmith     # recuperación del Documental por etapa
+python evaluation/mediador/precedentes_eval.py --langsmith        # recuperación de precedentes y barrido de PRECEDENTES_UMBRAL_RERANK
+python evaluation/mediador/eval_mediador.py --langsmith           # dictamen: estructura, factualidad, terminología, neutralidad, fidelidad
+python evaluation/mediador/eval_mediador.py --modelo openai/gpt-5.6 --langsmith   # comparar modelos
+python evaluation/mediador/eval_mediador.py --prompt v1 --langsmith               # comparar versiones del prompt
 ```
 
 ## Docker y CI
@@ -104,7 +116,8 @@ El CI (`.github/workflows/ci.yml`) corre `pytest`, la evaluación de punta a pun
 eliseo/
   schemas/        contratos compartidos (Pydantic): lo que cruza entre componentes
   plataforma/     SQLite que simula la plataforma de gestión (lectura con mínimo privilegio)
-  corpus.py       reglamento y actas con ids canónicos (REG-<n>, ACTA-<fecha>#<punto>)
+  corpus.py       reglamento y actas con ids canónicos (REG-<n>, ACTA-<fecha>#<punto>; los precedentes son PREC-<n>)
+  agentes/        documental/, gastos/ y mediador/: la implementación de cada agente
   grafo/
     conversacion.py   grafo por vecino: identificar → intake → ramas por intent
     caso.py           grafo por reclamo: Documental ‖ Precedentes → Mediador ⇄ verificador → panel → ejecución
@@ -115,6 +128,7 @@ eliseo/
 data/consorcios/rivadavia-4520/   reglamento, actas y plataforma.json (todo ficticio)
 prompts/                          master prompts versionados + CHANGELOG
 evaluation/casos.jsonl            los 12 casos del artefacto
+evaluation/<componente>/          evaluaciones por componente, cada una con su RESULTADOS.md
 ```
 
 **Para empezar tu componente:**
