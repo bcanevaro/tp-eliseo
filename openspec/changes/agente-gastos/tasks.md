@@ -17,4 +17,4 @@
 ## 3. Tests y evaluación
 
 - [x] 3.1 `tests/test_gastos_motor.py`: un test por scenario, más el agente con un modelo falso que inventa un monto
-- [ ] 3.2 Correr con el proxy real (`GASTOS_MODO=agente`) los casos `uso-02`, `borde-03` y `neg-02` de `evaluation/e2e/correr.py --juez` y anotar el resultado
+- [x] 3.2 Correr con el proxy real (`GASTOS_MODO=agente`) los casos `uso-02`, `borde-03` y `neg-02` de `evaluation/e2e/correr.py --juez` y anotar el resultado — 3/3 en `e2e-c4333d40`, después de arreglar la salida estructurada con Decimal y la caída por LengthFinishReasonError

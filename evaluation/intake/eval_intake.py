@@ -95,7 +95,9 @@ def subir_a_langsmith() -> str:
                   "pred_todos": {r.outputs["intent"], *r.outputs["multi"]}, "esp_todos": {e.outputs["intent"], *e.outputs["multi"]}}
                  for r, e in zip(runs, examples)]
         m = metricas(filas)
-        return [{"key": f"{i}_{k}", "score": m[i][k]} for i in INTENTS for k in ("precision", "recall") if m[i][k] is not None]
+        # LangSmith pide {"results": [...]} para varias métricas de resumen; una lista suelta la rechaza.
+        return {"results": [{"key": f"{i}_{k}", "score": m[i][k]} for i in INTENTS for k in ("precision", "recall")
+                            if m[i][k] is not None]}
 
     res = evaluate(lambda inputs: clasificar(inputs["texto"]), data=nombre,
                    evaluators=[intent_principal, todos_los_intents, urgencia], summary_evaluators=[resumen],

@@ -22,5 +22,5 @@
 - [x] 4.1 `tests/test_canal_intake.py`: scenarios de `canal-telegram` e `intake-router`, handlers con Telegram falso e intake con LLM falso
 - [x] 4.2 Dataset `evaluation/intake/mensajes.jsonl` (44 mensajes: multi-intent, urgencias, fuera de dominio, inyecciones)
 - [x] 4.3 `evaluation/intake/eval_intake.py`: precision y recall por intent, recall de urgencias, `--langsmith`
-- [ ] 4.4 Correr con el proxy real y anotar los resultados (el recall de urgencias tiene que dar 1)
+- [x] 4.4 Correr con el proxy real y anotar los resultados (el recall de urgencias tiene que dar 1)
 - [ ] 4.5 Probar el bot de punta a punta en Telegram (vincular, consulta, reclamo con foto, aprobación en el panel)

@@ -26,5 +26,5 @@
 - [x] 4.1 `evaluation/e2e/correr.py`: los 12 casos contra el grafo real, con evaluadores determinísticos
 - [x] 4.2 Juez LLM de tono y relevancia (`--juez`)
 - [x] 4.3 Dataset `eliseo-e2e` y experimento en LangSmith con repeticiones (`--langsmith`)
-- [ ] 4.4 Correr `--juez --langsmith` con las claves reales una vez enchufados intake, gastos y mediador, y anotar los resultados en `evaluation/e2e/RESULTADOS.md`
-- [ ] 4.5 Versionar prompts según las fallas (CHANGELOG + comparación v1/v2 en LangSmith)
+- [x] 4.4 Correr `--juez --langsmith` con las claves reales una vez enchufados intake, gastos y mediador, y anotar los resultados en `evaluation/e2e/RESULTADOS.md` — `e2e-c4333d40`; neg-04 queda como falla conocida
+- [ ] 4.5 Versionar prompts según las fallas (CHANGELOG + comparación v1/v2 en LangSmith). Mediador v1/v2 ya comparado (`evaluation/mediador/RESULTADOS.md`); pendiente neg-04 (repregunta ante una queja), a decidir por el dueño de canal-telegram-intake
