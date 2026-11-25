@@ -65,6 +65,38 @@ def test_reseed_idempotente(db_path):
     assert _volcado(db_path) == antes
 
 
+# Requirement: Siembra no destructiva — Scenario: Seed sobre una base con datos del panel
+def test_seed_no_borra_lo_cargado_desde_el_panel(db_path):
+    from eliseo.panel import padron
+    from scripts.seed_db import seed
+    from tests.cuentas_demo import sesion_demo
+
+    cid = padron.alta_consorcio(sesion_demo(), "Consorcio Corrientes 1200", "Corrientes 1200", "911",
+                                [padron.UnidadNueva(1, "A", "1")])
+    antes = _volcado(db_path)
+    seed(db_path)
+    assert _volcado(db_path) == antes
+    c = conectar(db_path)
+    assert c.execute("SELECT COUNT(*) FROM consorcios WHERE consorcio_id IN ('R4520', ?)", (cid,)).fetchone()[0] == 2
+    c.close()
+
+
+# Requirement: Siembra no destructiva — Scenario: Recrear la base
+def test_reset_en_postgres_pide_confirmacion(monkeypatch, capsys):
+    import scripts.seed_db as s
+
+    llamadas = []
+    monkeypatch.setenv("ELISEO_DB_URL", "postgresql+psycopg://u:clave@db.ejemplo.supabase.co:5432/postgres")
+    monkeypatch.setattr(s, "seed", lambda *a, **k: llamadas.append(k))
+    assert s.main(["--reset"], entrada=lambda _: "otra-cosa") == 1
+    salida = capsys.readouterr().out
+    assert llamadas == [] and "No se borró nada" in salida
+    assert "clave" not in salida  # la contraseña de la URL no se imprime
+    assert s.main(["--reset"], entrada=lambda _: "db.ejemplo.supabase.co") == 0
+    assert llamadas == [{"reset": True}]
+    assert s.main([]) == 0 and llamadas[-1] == {"reset": False}
+
+
 def test_coeficientes_suman_uno(conn):
     total = sum(u["coeficiente"] for u in lectura.unidades(conn, CID))
     assert abs(total - Decimal("1")) < Decimal("0.0001")

@@ -17,11 +17,11 @@
 
 ## 3. Padrón de consorcios y vecinos (padron-consorcios, D11)
 
-- [ ] 3.1 Implementar en `servicio.py` alta y edición de consorcio con unidades y la validación de coeficientes; tests de "Edificio nuevo" y "Coeficientes que no cierran"
-- [ ] 3.2 Implementar quitar unidad (bloqueado con vecinos o casos) y baja lógica de consorcio, con borrado de sus records en Pinecone; tests de "Unidad con vecino" y "Baja confirmada" con el índice simulado
-- [ ] 3.3 Implementar alta, edición y baja de vecino con teléfono normalizado y único; tests de "Vecino nuevo", "Teléfono ya registrado" (sin revelar el consorcio), "Teléfono inválido" y "Cambio de teléfono" (borra el vínculo)
-- [ ] 3.4 Hacer que `identidad_por_telefono` ignore los consorcios inactivos y que el seguimiento saltee los teléfonos fuera del padrón; tests de "Vecino dado de baja", "Conversación en curso" y "Mudanza a otro edificio de la misma administración"
-- [ ] 3.5 Agregar al panel las vistas "Edificios" y "Vecinos" con confirmación en las bajas, y verificarlas con `AppTest`
+- [x] 3.1 Implementar en `servicio.py` alta y edición de consorcio con unidades y la validación de coeficientes; tests de "Edificio nuevo" y "Coeficientes que no cierran"
+- [x] 3.2 Implementar quitar unidad (bloqueado con vecinos o casos) y baja lógica de consorcio, con borrado de sus records en Pinecone; tests de "Unidad con vecino" y "Baja confirmada" con el índice simulado
+- [x] 3.3 Implementar alta, edición y baja de vecino con teléfono normalizado y único; tests de "Vecino nuevo", "Teléfono ya registrado" (sin revelar el consorcio), "Teléfono inválido" y "Cambio de teléfono" (borra el vínculo)
+- [x] 3.4 Hacer que `identidad_por_telefono` ignore los consorcios inactivos y que el seguimiento saltee los teléfonos fuera del padrón; tests de "Vecino dado de baja", "Conversación en curso" y "Mudanza a otro edificio de la misma administración"
+- [x] 3.5 Agregar al panel las vistas "Edificios" y "Vecinos" con confirmación en las bajas, y verificarlas con `AppTest`
 
 ## 4. Documentos por consorcio (documentos-consorcio, D6, D7, D8)
 
@@ -43,7 +43,7 @@
 
 ## 6. Demo, configuración y documentación (datos-ficticios, D12)
 
-- [ ] 6.1 Hacer `scripts/seed_db.py` no destructivo, con `--reset` explícito (que pide confirmación en Postgres) y con la cuenta de prueba de la demo; tests de "Reseed idempotente" y "Seed sobre una base con datos del panel"
+- [x] 6.1 Hacer `scripts/seed_db.py` no destructivo, con `--reset` explícito (que pide confirmación en Postgres) y con la cuenta de prueba de la demo; tests de "Reseed idempotente" y "Seed sobre una base con datos del panel"
 - [ ] 6.2 Sembrar en los tests una segunda administración con su consorcio, para que el aislamiento se pruebe con datos reales y no solo con hits simulados; verificar que todos los tests de aislamiento la usan
 - [ ] 6.3 Agregar `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` y `ELISEO_DB_URL` a `.env.example` y a `scripts/check_servicios.py`, y verificar que el chequeo informa la base en uso y si Auth y Storage responden
 - [ ] 6.4 Actualizar el README (login, vistas del panel, vinculación del chat de avisos, Supabase y modo local) y verificar que los comandos documentados corren tal cual en una copia limpia

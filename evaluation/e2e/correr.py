@@ -64,7 +64,7 @@ def _entorno_aislado(tmp: Path) -> None:
     from scripts.seed_db import seed
     from eliseo.grafo import runtime
 
-    seed(tmp / "eliseo.db")
+    seed(tmp / "eliseo.db", reset=True)
     runtime._grafos.cache_clear()
     runtime._checkpointer.cache_clear()
 

@@ -12,8 +12,10 @@ from eliseo.schemas import Identidad, LineaGasto
 
 def identidad_por_telefono(conn: Conexion, telefono: str) -> Identidad | None:
     fila = conn.execute(
+        # Un consorcio dado de baja (activo = 0) deja a sus vecinos sin acceso (spec padron-consorcios).
         """SELECT v.telefono, v.nombre, u.unidad_id, u.unidad, u.consorcio_id
-           FROM vecinos v JOIN unidades u USING (unidad_id) WHERE v.telefono = ?""",
+           FROM vecinos v JOIN unidades u USING (unidad_id) JOIN consorcios c ON c.consorcio_id = u.consorcio_id
+           WHERE v.telefono = ? AND c.activo = 1""",
         (telefono,),
     ).fetchone()
     return Identidad(**dict(fila)) if fila else None

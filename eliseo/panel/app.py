@@ -17,7 +17,7 @@ import streamlit as st  # noqa: E402
 from pydantic import ValidationError  # noqa: E402
 
 from eliseo import cuentas  # noqa: E402
-from eliseo.panel import servicio  # noqa: E402
+from eliseo.panel import padron, servicio  # noqa: E402
 from eliseo.schemas import AccionAdmin, EstadoCaso  # noqa: E402
 
 st.set_page_config(page_title="Eliseo · Panel de la administración", page_icon="🏢", layout="wide")
@@ -92,16 +92,22 @@ if sesion is None:
 with st.sidebar:
     st.title("🏢 Eliseo")
     st.caption(f"{sesion.administracion} · {sesion.nombre}")
-    vista = st.radio("Vista", ["Panel de la administración", "Simulador de vecino"], label_visibility="collapsed")
+    vista = st.radio("Vista", ["Panel de la administración", "Edificios", "Vecinos", "Simulador de vecino"],
+                     label_visibility="collapsed")
     consorcios = servicio.consorcios(sesion)
-    if not consorcios:
-        st.info("Tu administración todavía no tiene edificios.")
-        st.button("Cerrar sesión", on_click=cerrar_sesion, use_container_width=True, key="logout")
-        st.stop()
-    nombres = {c["consorcio_id"]: c["nombre"] for c in consorcios}
-    consorcio_id = st.selectbox("Consorcio", list(nombres), format_func=nombres.get)
+    consorcio_id = None
+    if consorcios:
+        nombres = {c["consorcio_id"]: c["nombre"] for c in consorcios}
+        consorcio_id = st.selectbox("Consorcio", list(nombres), format_func=nombres.get)
+    else:
+        st.info("Tu administración todavía no tiene edificios. Dalos de alta en **Edificios**.")
     st.button("🔄 Actualizar", use_container_width=True)
     st.button("Cerrar sesión", on_click=cerrar_sesion, use_container_width=True, key="logout")
+
+if consorcio_id is None and vista != "Edificios":
+    st.subheader("Bienvenida")
+    st.write("Para empezar, andá a **Edificios** en la barra lateral y cargá tu primer edificio.")
+    st.stop()
 
 
 # ---------------------------------------------------------------- detalle de un caso
@@ -370,7 +376,157 @@ def _outbox(conn, telefono: str):
     return [(f["id"], f["destino"], MensajeSaliente.model_validate_json(f["mensaje_json"])) for f in filas]
 
 
+# ---------------------------------------------------------------- padrón (spec padron-consorcios)
+
+def _tabla_unidades(filas: list[dict], key: str):
+    """Editor de unidades: piso (0 = PB), depto y coeficiente. Devuelve la tabla editada."""
+    import pandas as pd
+
+    df = pd.DataFrame(filas or [{"piso": 1, "depto": "A", "coeficiente": "1.0000", "unidad_id": None}],
+                      columns=["piso", "depto", "coeficiente", "unidad_id"])
+    df["coeficiente"] = df["coeficiente"].astype(str)
+    editada = st.data_editor(
+        df, key=key, num_rows="dynamic", hide_index=True, use_container_width=True,
+        column_config={"piso": st.column_config.NumberColumn("Piso (0 = PB)", min_value=0, step=1, required=True),
+                       "depto": st.column_config.TextColumn("Depto", required=True),
+                       "coeficiente": st.column_config.TextColumn("Coeficiente", required=True,
+                                                                  help="Proporción de 0 a 1; todas suman 1"),
+                       "unidad_id": None})
+    return editada
+
+
+def _a_unidades(df) -> list[padron.UnidadNueva]:
+    import pandas as pd
+
+    unidades = []
+    for f in df.to_dict("records"):
+        if pd.isna(f.get("piso")) and not f.get("depto"):
+            continue  # fila vacía que agregó el editor
+        uid = f.get("unidad_id")
+        unidades.append(padron.UnidadNueva(piso=int(f["piso"]), depto=str(f["depto"] or ""),
+                                           coeficiente=str(f["coeficiente"]),
+                                           unidad_id=None if uid is None or pd.isna(uid) else str(uid)))
+    return unidades
+
+
+def _intentar(accion, exito: str) -> None:
+    try:
+        accion()
+    except padron.DatoInvalido as e:
+        st.error(str(e))
+    except servicio.NoEncontrado:
+        st.error("Eso ya no existe. Actualizá la página.")
+    else:
+        st.session_state.aviso = exito
+        st.rerun()
+
+
+def vista_edificios() -> None:
+    if aviso := st.session_state.pop("aviso", None):
+        st.toast(aviso)
+    if consorcio_id:
+        c = padron.consorcio(sesion, consorcio_id)
+        st.subheader(c["nombre"])
+        with st.form(f"datos-{consorcio_id}"):
+            nombre = st.text_input("Nombre", value=c["nombre"])
+            direccion = st.text_input("Dirección", value=c["direccion"])
+            tel = st.text_input("Teléfono de emergencias", value=c["telefono_emergencias"])
+            if st.form_submit_button("Guardar datos"):
+                _intentar(lambda: padron.editar_consorcio(sesion, consorcio_id, nombre, direccion, tel),
+                          "Datos del edificio guardados.")
+
+        st.markdown("**Unidades**")
+        actuales = padron.unidades(sesion, consorcio_id)
+        st.caption("Una unidad con vecinos o casos no se puede quitar. Los coeficientes tienen que sumar 1.")
+        editada = _tabla_unidades([{**u, "coeficiente": f"{u['coeficiente']:.4f}"} for u in actuales],
+                                  key=f"unidades-{consorcio_id}")
+        if st.button("Guardar unidades", key=f"guardar-unidades-{consorcio_id}"):
+            _intentar(lambda: padron.guardar_unidades(sesion, consorcio_id, _a_unidades(editada)),
+                      "Unidades guardadas.")
+
+        with st.expander("Dar de baja este edificio"):
+            st.warning("Sus vecinos dejan de poder usar el bot y sus documentos salen de las búsquedas. "
+                       "El historial de casos se conserva.")
+            if st.session_state.get("baja-consorcio") == consorcio_id:
+                c1, c2 = st.columns(2)
+                if c1.button("Sí, dar de baja", type="primary", key="baja-confirmar"):
+                    st.session_state.pop("baja-consorcio", None)
+                    _intentar(lambda: padron.baja_consorcio(sesion, consorcio_id), f"{c['nombre']} dado de baja.")
+                if c2.button("Cancelar", key="baja-cancelar"):
+                    st.session_state.pop("baja-consorcio", None)
+                    st.rerun()
+            elif st.button("Dar de baja", key="baja-pedir"):
+                st.session_state["baja-consorcio"] = consorcio_id
+                st.rerun()
+        st.divider()
+
+    st.subheader("Nuevo edificio")
+    with st.form("nuevo-edificio"):
+        nombre = st.text_input("Nombre", placeholder="Consorcio Corrientes 1200")
+        direccion = st.text_input("Dirección", placeholder="Corrientes 1200, CABA")
+        tel = st.text_input("Teléfono de emergencias", placeholder="911 · guardia de la administración")
+        st.caption("Unidades: agregá una fila por unidad.")
+        nuevas = _tabla_unidades([], key="unidades-nuevo")
+        if st.form_submit_button("Crear edificio", type="primary"):
+            _intentar(lambda: padron.alta_consorcio(sesion, nombre, direccion, tel, _a_unidades(nuevas)),
+                      f"{nombre} creado.")
+
+
+def vista_vecinos() -> None:
+    if aviso := st.session_state.pop("aviso", None):
+        st.toast(aviso)
+    st.subheader("Vecinos")
+    lista = servicio.vecinos(sesion, consorcio_id)
+    if lista:
+        st.dataframe([{"Unidad": v["unidad"], "Nombre": v["nombre"], "Teléfono": v["telefono"]} for v in lista],
+                     hide_index=True, use_container_width=True)
+    else:
+        st.info("Este edificio todavía no tiene vecinos.")
+    unidades = padron.unidades(sesion, consorcio_id)
+    etiquetas = {u["unidad_id"]: u["unidad"] for u in unidades}
+
+    with st.expander("Agregar vecino", expanded=not lista):
+        with st.form("alta-vecino", clear_on_submit=True):
+            nombre = st.text_input("Nombre y apellido")
+            unidad_id = st.selectbox("Unidad", list(etiquetas), format_func=etiquetas.get)
+            tel = st.text_input("Celular (el que usa en Telegram)", placeholder="11 5555-1234")
+            if st.form_submit_button("Agregar", type="primary"):
+                _intentar(lambda: padron.alta_vecino(sesion, unidad_id, nombre, tel), f"{nombre} agregado.")
+
+    if not lista:
+        return
+    with st.expander("Editar o dar de baja"):
+        por_tel = {v["telefono"]: v for v in lista}
+        tel_actual = st.selectbox("Vecino", list(por_tel),
+                                  format_func=lambda t: f"{por_tel[t]['unidad']} · {por_tel[t]['nombre']}")
+        v = por_tel[tel_actual]
+        with st.form(f"editar-{tel_actual}"):
+            nombre = st.text_input("Nombre y apellido", value=v["nombre"])
+            ids = list(etiquetas)
+            unidad_id = st.selectbox("Unidad", ids, index=ids.index(v["unidad_id"]), format_func=etiquetas.get)
+            tel = st.text_input("Celular", value=v["telefono"],
+                                help="Si lo cambiás, tiene que volver a compartir su contacto en el bot.")
+            if st.form_submit_button("Guardar cambios"):
+                _intentar(lambda: padron.editar_vecino(sesion, tel_actual, nombre, unidad_id, tel), "Vecino actualizado.")
+        if st.session_state.get("baja-vecino") == tel_actual:
+            st.warning(f"¿Dar de baja a {v['nombre']} ({v['unidad']})? Deja de poder usar el bot desde su próximo mensaje.")
+            c1, c2 = st.columns(2)
+            if c1.button("Sí, dar de baja", type="primary", key="baja-vecino-confirmar"):
+                st.session_state.pop("baja-vecino", None)
+                _intentar(lambda: padron.baja_vecino(sesion, tel_actual), f"{v['nombre']} dado de baja.")
+            if c2.button("Cancelar", key="baja-vecino-cancelar"):
+                st.session_state.pop("baja-vecino", None)
+                st.rerun()
+        elif st.button("Dar de baja", key="baja-vecino-pedir"):
+            st.session_state["baja-vecino"] = tel_actual
+            st.rerun()
+
+
 if vista == "Simulador de vecino":
     vista_simulador()
+elif vista == "Edificios":
+    vista_edificios()
+elif vista == "Vecinos":
+    vista_vecinos()
 else:
     vista_panel()

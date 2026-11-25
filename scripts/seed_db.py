@@ -1,9 +1,9 @@
-"""Crea desde cero la base de la plataforma simulada a partir de data/consorcios/*/plataforma.json.
+"""Carga la demo (data/consorcios/*/plataforma.json y la cuenta de prueba) en la base configurada.
 
-Es idempotente: borra las tablas y las vuelve a cargar. También borra los checkpoints de los
-grafos, porque quedarían apuntando a casos que ya no existen.
+    python scripts/seed_db.py           # no borra nada: agrega solo lo que falte
+    python scripts/seed_db.py --reset   # borra TODA la base (y los checkpoints) y la recrea
 
-    python scripts/seed_db.py
+Con Postgres (Supabase), --reset pide escribir el host de la base para confirmar.
 """
 import json
 import re
@@ -93,15 +93,26 @@ def cargar_cuenta_demo(conn) -> None:
         crear_administrador(DEMO_ADMINISTRACION, email, "Laura Méndez", password, conn, con_supabase=False)
 
 
-def seed(destino: Path | str | None = None, raiz: Path = CONSORCIOS_DIR) -> Path | str:
-    """`destino`: la ruta de un SQLite, una URL, o None para la base configurada."""
+def seed(destino: Path | str | None = None, raiz: Path = CONSORCIOS_DIR, reset: bool = False) -> Path | str:
+    """Carga la demo en la base. `destino`: la ruta de un SQLite, una URL, o None para la configurada.
+
+    Sin `reset` (spec datos-ficticios, "Siembra no destructiva") no borra nada: crea las tablas que
+    falten y carga solo los consorcios y la cuenta de demo que no existan, así lo que se cargó desde
+    el panel queda intacto. Con `reset` borra la base entera (y los checkpoints) y la vuelve a cargar."""
     destino = destino or db_url()
     conn = conectar(destino)
-    borrar_todo(conn)
+    if reset:
+        borrar_todo(conn)
     crear_esquema(conn)
     for archivo in sorted(raiz.glob("*/plataforma.json")):
-        cargar_consorcio(conn, json.loads(archivo.read_text(encoding="utf-8")))
+        datos = json.loads(archivo.read_text(encoding="utf-8"))
+        if conn.execute("SELECT 1 FROM consorcios WHERE consorcio_id = ?",
+                        (datos["consorcio"]["consorcio_id"],)).fetchone() is None:
+            cargar_consorcio(conn, datos)
     cargar_cuenta_demo(conn)
+    if not reset:
+        conn.close()
+        return destino
     if conn.dialecto == "postgresql":
         # Los checkpoints viven en la misma base: se vacían (sin borrar las tablas, que el
         # checkpointer ya creó) para que no apunten a casos que ya no existen.
@@ -123,5 +134,23 @@ def _mostrar(destino) -> str:
     return re.sub(r"://([^:/@]+):[^@]+@", r"://\1:***@", str(destino))
 
 
+def main(argv: list[str] | None = None, entrada=input) -> int:
+    import argparse
+
+    p = argparse.ArgumentParser(description="Carga los datos de demo sin borrar nada (o recrea la base con --reset).")
+    p.add_argument("--reset", action="store_true", help="Borra TODA la base y la vuelve a cargar con la demo")
+    a = p.parse_args(argv)
+    destino = db_url()
+    if a.reset and destino.startswith("postgresql"):
+        host = re.sub(r"^.*@", "", destino).split("/")[0].split(":")[0]
+        print(f"Vas a BORRAR todos los datos de {_mostrar(destino)} (casos, vecinos, edificios y cuentas).")
+        if entrada(f"Para confirmar, escribí el host ({host}): ").strip() != host:
+            print("No se borró nada.")
+            return 1
+    seed(destino, reset=a.reset)
+    print(f"{'Base recreada' if a.reset else 'Demo cargada (sin borrar nada)'} en {_mostrar(destino)}")
+    return 0
+
+
 if __name__ == "__main__":
-    print(f"Base creada en {_mostrar(seed())}")
+    sys.exit(main())

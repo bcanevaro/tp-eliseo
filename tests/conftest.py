@@ -51,9 +51,9 @@ def db_path(tmp_path, monkeypatch):
     if url := os.environ.get("ELISEO_TEST_DB_URL"):
         # Job de Postgres del CI: la misma suite contra una base Postgres descartable.
         monkeypatch.setenv("ELISEO_DB_URL", url)
-        seed(url)
+        seed(url, reset=True)
         return url
-    seed(path)
+    seed(path, reset=True)
     return path
 
 
