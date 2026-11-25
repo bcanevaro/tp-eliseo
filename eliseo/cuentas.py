@@ -7,8 +7,11 @@ dio de alta:
 
 Las administraciones y las cuentas se crean con `scripts/alta_administracion.py`, no desde el panel.
 """
+import hashlib
 import logging
+import secrets
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 
 import bcrypt
 
@@ -98,6 +101,57 @@ def sesion_de(admin_id: int, conn: Conexion | None = None) -> Sesion | None:
     """Relee la sesión desde la base (si la cuenta se borró, ya no hay sesión)."""
     fila = (conn or get_conn()).execute(_SELECT + " WHERE a.admin_id = ?", (admin_id,)).fetchone()
     return _sesion(fila) if fila else None
+
+
+# ---------------------------------------------------------------- chat de avisos (spec canal-administracion)
+
+VIGENCIA_CODIGO = timedelta(minutes=15)
+_ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # sin 0/O ni 1/I, que se confunden al tipear
+
+
+def _hash_codigo(codigo: str) -> str:
+    return hashlib.sha256(codigo.strip().upper().encode("utf-8")).hexdigest()
+
+
+def _ahora_utc() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _texto_fecha(d: datetime) -> str:
+    return d.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def generar_codigo_avisos(sesion: Sesion, conn: Conexion | None = None) -> str:
+    """Un código de un solo uso para la administración de la sesión. Se muestra una vez en el panel;
+    en la base queda solo su hash."""
+    conn = conn or get_conn()
+    codigo = "".join(secrets.choice(_ALFABETO) for _ in range(8))
+    conn.execute("INSERT INTO codigos_vinculacion (codigo_hash, administracion_id, vence) VALUES (?, ?, ?)",
+                 (_hash_codigo(codigo), sesion.administracion_id, _texto_fecha(_ahora_utc() + VIGENCIA_CODIGO)))
+    return codigo
+
+
+def vincular_chat_avisos(codigo: str, chat_id: str, conn: Conexion | None = None) -> str | None:
+    """Deja `chat_id` como chat de avisos de la administración del código (reemplaza al anterior).
+    Devuelve el nombre de la administración, o None si el código no existe, venció o ya se usó."""
+    conn = conn or get_conn()
+    fila = conn.execute(
+        """UPDATE codigos_vinculacion SET usado = 1
+           WHERE codigo_hash = ? AND usado = 0 AND vence > ?
+           RETURNING administracion_id""",
+        (_hash_codigo(codigo or ""), _texto_fecha(_ahora_utc()))).fetchone()
+    if fila is None:
+        return None
+    conn.execute("UPDATE administraciones SET chat_avisos_id = ? WHERE administracion_id = ?",
+                 (str(chat_id), fila["administracion_id"]))
+    return conn.execute("SELECT nombre FROM administraciones WHERE administracion_id = ?",
+                        (fila["administracion_id"],)).fetchone()["nombre"]
+
+
+def chat_avisos(administracion_id: str, conn: Conexion | None = None) -> str | None:
+    fila = (conn or get_conn()).execute("SELECT chat_avisos_id FROM administraciones WHERE administracion_id = ?",
+                                        (administracion_id,)).fetchone()
+    return fila["chat_avisos_id"] if fila else None
 
 
 # ---------------------------------------------------------------- altas (script de operación)

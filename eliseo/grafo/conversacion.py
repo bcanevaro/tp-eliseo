@@ -65,7 +65,10 @@ def identificar(state: EstadoConversacion) -> dict:
 
 def saludar(state: EstadoConversacion) -> dict:
     i = state["identidad"]
-    return {"salidas": [MensajeSaliente(texto=textos.SALUDO.format(nombre=i.nombre.split()[0], unidad=i.unidad),
+    # Un solo bot para todas las administraciones: se presenta con la del vecino (spec canal-administracion).
+    administracion = lectura.consorcio(get_conn(), i.consorcio_id)["administracion"]
+    return {"salidas": [MensajeSaliente(texto=textos.SALUDO.format(nombre=i.nombre.split()[0], unidad=i.unidad,
+                                                                   administracion=administracion),
                                         botones=textos.BOTONES_INICIO)]}
 
 

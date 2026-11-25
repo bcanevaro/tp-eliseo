@@ -15,7 +15,7 @@ TELEFONO_NO_REGISTRADO = (
     "Tu número no figura en el registro de la administración. Le pedí que lo valide y te "
     "avisamos por acá. Mientras tanto no puedo mostrarte datos del consorcio."
 )
-SALUDO = "Hola, {nombre} ({unidad}). Soy Eliseo, el asistente de la administración. ¿En qué te ayudo?"
+SALUDO = "Hola, {nombre} ({unidad}). Soy Eliseo, el asistente de {administracion}. ¿En qué te ayudo?"
 DERIVADO_SIN_FUENTE = (
     "No encontré nada en el reglamento ni en las actas que responda eso, así que no quiero "
     "contestarte sin fuente. Le pasé tu consulta a la administración y te responden por acá."

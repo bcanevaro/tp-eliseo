@@ -35,11 +35,11 @@
 
 ## 5. Bot único y avisos por administración (canal-administracion, D1, D9)
 
-- [ ] 5.1 Agregar `administraciones.chat_avisos_id` y la tabla de códigos de vinculación (hash, vencimiento, usado); tests de código válido, vencido, usado e inexistente
-- [ ] 5.2 Agregar el comando `/admin <código>` al bot y el botón "Vincular chat de avisos" al panel; verificar con un test del handler que el chat queda vinculado y el bot confirma con el nombre de la administración
-- [ ] 5.3 Resolver `admin:<consorcio>` por administración en `ejecucion.chat_de_destino` y quitar `TELEGRAM_CHAT_ADMIN_ID`; tests de "Urgencia en un consorcio" (llega solo a su administración) y "Administración sin chat vinculado" (queda pendiente y el panel lo indica)
-- [ ] 5.4 Presentar el bot con la administración del vecino en el saludo; actualizar el test de saludo de `canal-telegram` y verificar el scenario "Vecinos de dos administraciones"
-- [ ] 5.5 Agregar un test de que el Mediador arma el dictamen para una administración sin archivo de criterios
+- [x] 5.1 Agregar `administraciones.chat_avisos_id` y la tabla de códigos de vinculación (hash, vencimiento, usado); tests de código válido, vencido, usado e inexistente
+- [x] 5.2 Agregar el comando `/admin <código>` al bot y el botón "Vincular chat de avisos" al panel; verificar con un test del handler que el chat queda vinculado y el bot confirma con el nombre de la administración
+- [x] 5.3 Resolver `admin:<consorcio>` por administración en `ejecucion.chat_de_destino` y quitar `TELEGRAM_CHAT_ADMIN_ID`; tests de "Urgencia en un consorcio" (llega solo a su administración) y "Administración sin chat vinculado" (queda pendiente y el panel lo indica)
+- [x] 5.4 Presentar el bot con la administración del vecino en el saludo; actualizar el test de saludo de `canal-telegram` y verificar el scenario "Vecinos de dos administraciones"
+- [x] 5.5 Agregar un test de que el Mediador arma el dictamen para una administración sin archivo de criterios
 
 ## 6. Demo, configuración y documentación (datos-ficticios, D12)
 

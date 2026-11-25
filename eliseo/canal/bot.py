@@ -4,7 +4,8 @@
 
 Necesita TELEGRAM_BOT_TOKEN en el .env. Comandos:
     /start          saluda (o pide el número la primera vez)
-    /chatid         devuelve el id del chat (para TELEGRAM_CHAT_ADMIN_ID)
+    /chatid         devuelve el id del chat
+    /admin <código> vincula el chat como chat de avisos de una administración (código del panel)
     /demo 4°B       solo con ELISEO_DEMO=1: vincula tu Telegram con un vecino de demo de esa unidad
 
 Todo el trabajo del grafo corre en un único hilo de fondo (SQLite y los checkpoints no se
@@ -117,7 +118,25 @@ async def on_audio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def on_chatid(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(f"El id de este chat es {update.effective_chat.id}.\n"
-                                    "Para recibir acá las urgencias: TELEGRAM_CHAT_ADMIN_ID=" f"{update.effective_chat.id}")
+                                    "Para recibir acá los avisos de tu administración, generá un código en el "
+                                    "panel (Vincular chat de avisos) y mandámelo con /admin <código>.")
+
+
+async def on_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Vincula este chat como chat de avisos de una administración (spec canal-administracion)."""
+    texto = await en_hilo(respuesta_admin, "".join(context.args), str(update.effective_chat.id))
+    await update.message.reply_text(texto)
+
+
+def respuesta_admin(codigo: str, chat_id: str) -> str:
+    """Sin detalles si el código no sirve: no se distingue vencido, usado o inexistente."""
+    from eliseo.cuentas import vincular_chat_avisos
+
+    administracion = vincular_chat_avisos(codigo, chat_id) if codigo.strip() else None
+    if administracion is None:
+        return "Ese código no es válido. Generá uno nuevo en el panel (vence a los 15 minutos)."
+    return (f"Listo: este chat recibe los avisos y urgencias de {administracion}. "
+            "Si vinculás otro chat, este deja de recibirlos.")
 
 
 async def on_demo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -174,6 +193,7 @@ def construir_app(token: str) -> Application:
     app = Application.builder().token(token).post_init(al_iniciar).build()
     app.add_handler(CommandHandler("start", on_start))
     app.add_handler(CommandHandler("chatid", on_chatid))
+    app.add_handler(CommandHandler("admin", on_admin))
     app.add_handler(CommandHandler("demo", on_demo))
     app.add_handler(MessageHandler(filters.CONTACT, on_contacto))
     app.add_handler(MessageHandler(filters.PHOTO, on_foto))

@@ -15,7 +15,6 @@ from typing import Callable
 
 from eliseo import textos
 from eliseo.agentes.mediador import precedentes
-from eliseo.config import env
 from eliseo.plataforma import escritura, lectura
 from eliseo.plataforma.db import get_conn
 from eliseo.schemas import Caso, Dictamen, EstadoCaso, MensajeSaliente
@@ -130,12 +129,16 @@ def hablar_con_admin(state: dict) -> dict:
 # ---------------------------------------------------------------- envío de la outbox (lo llama el bot)
 
 def chat_de_destino(conn, destino: str) -> str | None:
-    """'vecino:<telefono>' → chat de Telegram vinculado; 'admin:<consorcio>' → TELEGRAM_CHAT_ADMIN_ID."""
+    """'vecino:<telefono>' → chat de Telegram vinculado; 'admin:<consorcio>' → el chat de avisos de la
+    administración de ese consorcio (spec canal-administracion), o None si no lo vinculó."""
     tipo, _, valor = destino.partition(":")
     if tipo == "vecino":
         return lectura.chat_de_telefono(conn, valor)
     if tipo == "admin":
-        return env("TELEGRAM_CHAT_ADMIN_ID", default="") or None
+        fila = conn.execute(
+            """SELECT a.chat_avisos_id FROM consorcios c JOIN administraciones a USING (administracion_id)
+               WHERE c.consorcio_id = ?""", (valor,)).fetchone()
+        return fila["chat_avisos_id"] if fila else None
     return None
 
 

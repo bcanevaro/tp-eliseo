@@ -7,7 +7,7 @@ from pydantic import ValidationError
 from eliseo import ejecucion
 from eliseo.grafo import runtime
 from eliseo.panel import servicio
-from tests.cuentas_demo import app_logueada, sesion_demo
+from tests.cuentas_demo import app_logueada, sesion_demo, vincular_chat_demo
 from eliseo.plataforma import escritura
 from eliseo.plataforma.db import get_conn
 from eliseo.schemas import AccionAdmin, Adjunto, EstadoCaso, MensajeEntrante
@@ -176,7 +176,7 @@ def test_rechazo_no_crea_precedente(bot):
 
 # Requirement: Aviso de urgencias — Scenario: Olor a gas
 def test_urgencia_llega_al_chat_de_la_administracion(bot, monkeypatch):
-    monkeypatch.setenv("TELEGRAM_CHAT_ADMIN_ID", "chat-admin")
+    vincular_chat_demo("chat-admin")
     bot("hay mucho olor a gas en el palier")
     enviados = []
     assert ejecucion.enviar_pendientes(lambda chat, m: enviados.append((chat, m.texto))) == 1
@@ -194,7 +194,7 @@ def test_outbox_va_al_chat_vinculado_del_vecino(bot):
 
 
 def test_falla_de_envio_queda_pendiente(bot, monkeypatch):
-    monkeypatch.setenv("TELEGRAM_CHAT_ADMIN_ID", "chat-admin")
+    vincular_chat_demo("chat-admin")
     bot("hay olor a gas")
 
     def falla(chat, m):

@@ -22,7 +22,7 @@ from eliseo.canal.telegram import (
 )
 from eliseo.grafo import runtime
 from eliseo.panel import servicio
-from tests.cuentas_demo import app_logueada, sesion_demo
+from tests.cuentas_demo import app_logueada, sesion_demo, vincular_chat_demo
 from eliseo.plataforma import escritura, lectura
 from eliseo.plataforma.db import get_conn
 from eliseo.schemas import Intent, MensajeEntrante, MensajeSaliente, ReclamoBorrador, ResultadoIntake
@@ -134,7 +134,7 @@ def test_bot_vincula_saluda_y_responde_con_estado(db_path):
 
 
 def test_bot_vacia_la_outbox(db_path, monkeypatch):
-    monkeypatch.setenv("TELEGRAM_CHAT_ADMIN_ID", "123")
+    vincular_chat_demo("123")
     escritura.encolar_mensaje(get_conn(), "admin:R4520", MensajeSaliente(texto="🚨 prueba"), clave="t1")
     enviados = []
     assert bot.ejecucion.enviar_pendientes(lambda chat, m: enviados.append((chat, m.texto))) == 1

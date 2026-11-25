@@ -38,6 +38,14 @@ CREATE TABLE IF NOT EXISTS administradores (
     auth_user_id TEXT UNIQUE,
     creado TEXT NOT NULL DEFAULT {ahora}
 );
+-- Códigos de un solo uso para vincular el chat de avisos de una administración (spec
+-- canal-administracion, design D9). Solo se guarda el hash; vence a los 15 minutos.
+CREATE TABLE IF NOT EXISTS codigos_vinculacion (
+    codigo_hash TEXT PRIMARY KEY,
+    administracion_id TEXT NOT NULL REFERENCES administraciones,
+    vence TEXT NOT NULL,
+    usado INTEGER NOT NULL DEFAULT 0
+);
 -- administracion y administradora (texto) quedan por compatibilidad: los leen el Mediador y los
 -- mensajes; administracion_id es la que define quién ve el consorcio. activo = 0: baja lógica.
 CREATE TABLE IF NOT EXISTS consorcios (
@@ -212,7 +220,7 @@ _DIALECTOS = {
 TABLAS = [
     "documentos", "outbox", "pedidos", "decisiones", "dictamenes", "derivaciones", "precedentes", "casos",
     "movimientos_cc", "lineas_liquidacion", "liquidaciones", "facturas",
-    "vinculos_canal", "vecinos", "unidades", "consorcios", "administradores", "administraciones",
+    "vinculos_canal", "vecinos", "unidades", "consorcios", "codigos_vinculacion", "administradores", "administraciones",
 ]
 
 # Columnas agregadas después de que la tabla ya existía en bases creadas antes (tabla → [(columna, tipo)]).

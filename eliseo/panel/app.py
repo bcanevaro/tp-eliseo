@@ -102,6 +102,15 @@ with st.sidebar:
     else:
         st.info("Tu administración todavía no tiene edificios. Dalos de alta en **Edificios**.")
     st.button("🔄 Actualizar", use_container_width=True)
+    chat_vinculado = bool(cuentas.chat_avisos(sesion.administracion_id))
+    with st.expander("📣 Chat de avisos" + ("" if chat_vinculado else " · sin vincular"), expanded=not chat_vinculado):
+        st.caption("Las urgencias de tus edificios llegan a este chat de Telegram." if chat_vinculado
+                   else "Todavía no vinculaste un chat: las urgencias quedan solo en la bandeja.")
+        if st.button("Vincular chat de avisos" if not chat_vinculado else "Cambiar de chat", key="codigo-avisos"):
+            st.session_state.codigo_avisos = cuentas.generar_codigo_avisos(sesion)
+        if codigo := st.session_state.get("codigo_avisos"):
+            st.markdown(f"Desde el chat donde querés recibirlos, mandale al bot:\n\n`/admin {codigo}`")
+            st.caption("El código sirve una sola vez y vence a los 15 minutos.")
     st.button("Cerrar sesión", on_click=cerrar_sesion, use_container_width=True, key="logout")
 
 if consorcio_id is None and vista != "Edificios":
@@ -292,6 +301,9 @@ def vista_panel() -> None:
     with izq:
         st.subheader("Bandeja")
         grupos = servicio.bandeja(sesion, consorcio_id)
+        if grupos["urgencias"] and not chat_vinculado:
+            st.warning("Hay urgencias y tu administración no tiene un chat de avisos vinculado: "
+                       "vinculalo desde la barra lateral para recibirlas por Telegram.")
         for clave, titulo in servicio.GRUPOS:
             items = grupos[clave]
             st.markdown(f"**{titulo}** ({len(items)})")

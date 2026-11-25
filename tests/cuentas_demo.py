@@ -16,3 +16,11 @@ def app_logueada(ruta: str):
     at = AppTest.from_file(ruta, default_timeout=30)
     at.session_state["admin_id"] = sesion_demo().admin_id
     return at
+
+
+def vincular_chat_demo(chat_id: str) -> None:
+    """El chat de avisos de la Administración Méndez, como si se hubiera vinculado con /admin <código>."""
+    from eliseo.plataforma.db import get_conn
+
+    get_conn().execute("UPDATE administraciones SET chat_avisos_id = ? WHERE administracion_id = 'administracion-mendez'",
+                       (chat_id,))
