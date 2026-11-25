@@ -7,6 +7,7 @@ from pydantic import ValidationError
 from eliseo import ejecucion
 from eliseo.grafo import runtime
 from eliseo.panel import servicio
+from tests.cuentas_demo import app_logueada, sesion_demo
 from eliseo.plataforma import escritura
 from eliseo.plataforma.db import get_conn
 from eliseo.schemas import AccionAdmin, Adjunto, EstadoCaso, MensajeEntrante
@@ -36,6 +37,17 @@ def _caso(bot) -> int:
     return caso_id
 
 
+# spec cuentas-admin — Requirement: Decisión firmada por la cuenta — Scenario: Autor de una aprobación
+def test_decision_firmada_por_la_cuenta_de_la_sesion(bot):
+    from eliseo.schemas import DecisionAdmin
+
+    caso_id, sesion = _caso(bot), sesion_demo()
+    # Aunque la decisión llegue armada con otro autor, queda registrada con la cuenta de la sesión.
+    servicio.decidir(sesion, caso_id, DecisionAdmin(accion=AccionAdmin.APROBAR, admin_id="otra-persona"))
+    (decision,) = servicio.detalle_caso(sesion, caso_id).decisiones
+    assert decision["admin_id"] == sesion.email
+
+
 def _al_vecino():
     return [m for _, d, m in escritura.outbox_pendientes(get_conn()) if d == f"vecino:{TEL_4B}"]
 
@@ -50,7 +62,7 @@ def _pedidos(caso_id):
 def test_urgencia_primero_en_la_bandeja(bot):
     caso_id = _caso(bot)
     bot("hay olor a gas en el palier")
-    grupos = servicio.bandeja("R4520")
+    grupos = servicio.bandeja(sesion_demo(), "R4520")
     assert [g for g, _ in servicio.GRUPOS][0] == "urgencias"
     (urgencia,) = grupos["urgencias"]
     assert "gas" in urgencia.detalle and "4°B" in urgencia.titulo
@@ -60,15 +72,16 @@ def test_urgencia_primero_en_la_bandeja(bot):
 def test_bandeja_separa_derivaciones_e_incompletos(bot):
     bot("¿Puedo poner una pileta en la terraza?")
     bot(texto="Hablar con la administración")
-    grupos = servicio.bandeja("R4520")
+    grupos = servicio.bandeja(sesion_demo(), "R4520")
     assert len(grupos["sin_fuente"]) == 1 and "pileta" in grupos["sin_fuente"][0].detalle
     assert len(grupos["hablar"]) == 1
-    assert servicio.bandeja("OTRO")["sin_fuente"] == []  # nada de otros consorcios
+    with pytest.raises(servicio.NoEncontrado):  # un consorcio ajeno o inexistente no se puede ver
+        servicio.bandeja(sesion_demo(), "OTRO")
 
 
 # Requirement: Lo escrito por la IA, marcado — Scenario: Revisión de un dictamen
 def test_detalle_con_hipotesis_y_fuentes(bot):
-    det = servicio.detalle_caso(_caso(bot))
+    det = servicio.detalle_caso(sesion_demo(), _caso(bot))
     assert det.esperando_decision and det.caso.estado is EstadoCaso.PENDIENTE_APROBACION
     assert {h.responsable for h in det.dictamen.hipotesis} == {"unidad", "consorcio"}
     assert det.dictamen.recomendacion.tipo == "inspeccion"
@@ -78,33 +91,33 @@ def test_detalle_con_hipotesis_y_fuentes(bot):
 
 
 # Requirement: Aprobar, Modificar o Rechazar — Scenario: Rechazo sin motivo
-def test_rechazo_exige_motivo():
+def test_rechazo_exige_motivo(db_path):
     with pytest.raises(ValidationError):
-        servicio.armar_decision(AccionAdmin.RECHAZAR, "laura", motivo="   ")
+        servicio.armar_decision(AccionAdmin.RECHAZAR, sesion_demo(), motivo="   ")
 
 
 # Scenario: Modificar
 def test_modificar_envia_el_texto_editado_y_registra_los_dos(bot):
     caso_id = _caso(bot)
-    original = servicio.detalle_caso(caso_id).dictamen.mensaje_vecino
+    original = servicio.detalle_caso(sesion_demo(), caso_id).dictamen.mensaje_vecino
     editado = "Vamos a mandar un plomero esta semana para revisar tu baño y el del 5°B."
-    servicio.decidir(caso_id, servicio.armar_decision("MODIFICAR", "laura", mensaje_final=editado))
+    servicio.decidir(sesion_demo(), caso_id, servicio.armar_decision("MODIFICAR", sesion_demo(), mensaje_final=editado))
     (m,) = _al_vecino()
     assert editado in m.texto and original not in m.texto and f"#{caso_id}" in m.texto
-    det = servicio.detalle_caso(caso_id)
+    det = servicio.detalle_caso(sesion_demo(), caso_id)
     assert det.decisiones[0]["mensaje_final"] == editado and det.dictamen.mensaje_vecino == original
 
 
 # Requirement: Respuesta manual a derivaciones — Scenario: Consulta sin fuente
 def test_respuesta_manual_a_consulta_sin_fuente(bot):
     bot("¿Puedo poner una pileta en la terraza?")
-    (item,) = servicio.bandeja("R4520")["sin_fuente"]
-    servicio.responder_derivacion(item.id, "No está permitido: requiere aprobación de asamblea.", "laura")
+    (item,) = servicio.bandeja(sesion_demo(), "R4520")["sin_fuente"]
+    servicio.responder_derivacion(sesion_demo(), item.id, "No está permitido: requiere aprobación de asamblea.")
     (m,) = _al_vecino()
     assert m.de_la_administracion and "asamblea" in m.texto
-    assert servicio.bandeja("R4520")["sin_fuente"] == []
+    assert servicio.bandeja(sesion_demo(), "R4520")["sin_fuente"] == []
     with pytest.raises(ValueError):
-        servicio.responder_derivacion(item.id, "  ", "laura")
+        servicio.responder_derivacion(sesion_demo(), item.id, "  ")
 
 
 # ---------------------------------------------------------------- ejecucion
@@ -112,8 +125,8 @@ def test_respuesta_manual_a_consulta_sin_fuente(bot):
 # Requirement: Confirmación antes de lo irreversible — Scenario: Cancelar en la confirmación
 def test_vista_previa_no_ejecuta_nada(bot):
     caso_id = _caso(bot)
-    det = servicio.detalle_caso(caso_id)
-    prev = servicio.vista_previa(det, servicio.armar_decision("APROBAR", "laura"))
+    det = servicio.detalle_caso(sesion_demo(), caso_id)
+    prev = servicio.vista_previa(det, servicio.armar_decision("APROBAR", sesion_demo()))
     assert "Sofía" in prev.destinatario and "4°B" in prev.destinatario and prev.canal_vinculado
     assert f"#{caso_id}" in prev.mensaje and "Fuente:" in prev.mensaje and prev.pedido.startswith("inspección")
     # Cancelar = no llamar a decidir: no salió nada y el caso sigue esperando.
@@ -124,16 +137,16 @@ def test_vista_previa_no_ejecuta_nada(bot):
 # Requirement: Idempotencia por dictamen — Scenario: Doble click en Aprobar
 def test_doble_aprobacion_no_duplica(bot):
     caso_id = _caso(bot)
-    decision = servicio.armar_decision("APROBAR", "laura")
-    servicio.decidir(caso_id, decision)
+    decision = servicio.armar_decision("APROBAR", sesion_demo())
+    servicio.decidir(sesion_demo(), caso_id, decision)
     with pytest.raises(ValueError):
-        servicio.decidir(caso_id, decision)
+        servicio.decidir(sesion_demo(), caso_id, decision)
     assert len(_al_vecino()) == 1 and len(_pedidos(caso_id)) == 1
 
 
 def test_reejecutar_el_nodo_no_duplica(bot):
     caso_id = _caso(bot)
-    servicio.decidir(caso_id, servicio.armar_decision("APROBAR", "laura"))
+    servicio.decidir(sesion_demo(), caso_id, servicio.armar_decision("APROBAR", sesion_demo()))
     estado = runtime.estado_caso(caso_id)["valores"]
     ejecucion.ejecucion(estado)  # p. ej. un reintento tras una caída
     assert len(_al_vecino()) == 1 and len(_pedidos(caso_id)) == 1
@@ -143,20 +156,20 @@ def test_reejecutar_el_nodo_no_duplica(bot):
 # Requirement: Envío y cierre — Scenario: Aprobación de inspección
 def test_aprobacion_de_inspeccion_y_precedente(bot):
     caso_id = _caso(bot)
-    caso = servicio.decidir(caso_id, servicio.armar_decision("APROBAR", "laura"))
+    caso = servicio.decidir(sesion_demo(), caso_id, servicio.armar_decision("APROBAR", sesion_demo()))
     assert caso.estado is EstadoCaso.APROBADO
     (m,) = _al_vecino()
     assert f"#{caso_id}" in m.texto and "Fuente:" in m.texto and "REG-15" in m.texto
     assert [p["tipo"] for p in _pedidos(caso_id)] == ["inspeccion"]
     prec = get_conn().execute("SELECT * FROM precedentes WHERE caso_id = ?", (caso_id,)).fetchone()
     assert prec["prec_id"].startswith("PREC-") and f"caso {caso_id}" in prec["procedencia"]
-    assert "laura" in prec["procedencia"] and prec["tipo"] == "filtracion" and "columna B" in prec["ubicacion"]
+    assert sesion_demo().email in prec["procedencia"] and prec["tipo"] == "filtracion" and "columna B" in prec["ubicacion"]
 
 
 # spec precedentes — Scenario: Dictamen rechazado
 def test_rechazo_no_crea_precedente(bot):
     caso_id = _caso(bot)
-    servicio.decidir(caso_id, servicio.armar_decision("RECHAZAR", "laura", motivo="falta inspección"))
+    servicio.decidir(sesion_demo(), caso_id, servicio.armar_decision("RECHAZAR", sesion_demo(), motivo="falta inspección"))
     assert get_conn().execute("SELECT COUNT(*) FROM precedentes WHERE caso_id = ?", (caso_id,)).fetchone()[0] == 0
     assert not _pedidos(caso_id) and _al_vecino() == []
 
@@ -174,7 +187,7 @@ def test_urgencia_llega_al_chat_de_la_administracion(bot, monkeypatch):
 
 def test_outbox_va_al_chat_vinculado_del_vecino(bot):
     caso_id = _caso(bot)
-    servicio.decidir(caso_id, servicio.armar_decision("APROBAR", "laura"))
+    servicio.decidir(sesion_demo(), caso_id, servicio.armar_decision("APROBAR", sesion_demo()))
     enviados = []
     ejecucion.enviar_pendientes(lambda chat, m: enviados.append(chat))
     assert enviados == ["chat-u-4b"]
@@ -197,7 +210,7 @@ def test_panel_aprobar_con_confirmacion(bot):
     from streamlit.testing.v1 import AppTest
 
     caso_id = _caso(bot)
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = app_logueada(APP).run()
     assert not at.exception
     at.button(key=f"caso-{caso_id}").click().run()
     assert any("Hipótesis A" in m.value for m in at.markdown)
@@ -214,7 +227,7 @@ def test_panel_rechazo_bloqueado_sin_motivo(bot):
     from streamlit.testing.v1 import AppTest
 
     caso_id = _caso(bot)
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = app_logueada(APP).run()
     at.button(key=f"caso-{caso_id}").click().run()
     at.radio(key=f"accion-{caso_id}").set_value("Rechazar").run()
     assert at.button(key=f"rev-{caso_id}").disabled
@@ -225,7 +238,7 @@ def test_simulador_de_vecino(db_path):
 
     runtime._grafos.cache_clear()
     runtime._checkpointer.cache_clear()
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = app_logueada(APP).run()
     at.sidebar.radio[0].set_value("Simulador de vecino").run()
     assert not at.exception
     at.chat_input[0].set_value("¿Puedo tener un perro?").run()

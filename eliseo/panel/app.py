@@ -4,6 +4,9 @@
 
 Solo dibuja: la lógica está en `servicio.py`. Incluye un simulador de vecino para probar y
 mostrar el flujo completo sin Telegram (usa el mismo runtime que el bot).
+
+Exige iniciar sesión (spec cuentas-admin): sin sesión solo se ve el formulario de ingreso, y
+todo lo que se muestra sale de `servicio` filtrado por la administración de la cuenta.
 """
 import sys
 from pathlib import Path
@@ -13,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import streamlit as st  # noqa: E402
 from pydantic import ValidationError  # noqa: E402
 
+from eliseo import cuentas  # noqa: E402
 from eliseo.panel import servicio  # noqa: E402
 from eliseo.schemas import AccionAdmin, EstadoCaso  # noqa: E402
 
@@ -50,19 +54,54 @@ def seleccionar(tipo: str, id_: int) -> None:
     st.session_state.pop("pendiente", None)
 
 
+# ---------------------------------------------------------------- sesión
+
+def pantalla_ingreso() -> None:
+    _, centro, _ = st.columns([1, 1.2, 1])
+    with centro:
+        st.title("🏢 Eliseo")
+        st.caption("Panel de la administración")
+        with st.form("ingreso"):
+            email = st.text_input("Email", key="login-email")
+            password = st.text_input("Contraseña", type="password", key="login-password")
+            entrar = st.form_submit_button("Ingresar", type="primary", use_container_width=True)
+        if entrar:
+            sesion = cuentas.autenticar(email, password)
+            if sesion is None:
+                st.error(cuentas.ERROR_LOGIN)
+            else:
+                st.session_state.clear()
+                st.session_state.admin_id = sesion.admin_id
+                st.rerun()
+
+
+def cerrar_sesion() -> None:
+    st.session_state.clear()
+
+
+# La sesión se relee de la base en cada interacción: si la cuenta se borra, deja de valer.
+sesion = cuentas.sesion_de(st.session_state["admin_id"]) if st.session_state.get("admin_id") else None
+if sesion is None:
+    st.session_state.pop("admin_id", None)
+    pantalla_ingreso()
+    st.stop()
+
+
 # ---------------------------------------------------------------- barra lateral
 
 with st.sidebar:
     st.title("🏢 Eliseo")
+    st.caption(f"{sesion.administracion} · {sesion.nombre}")
     vista = st.radio("Vista", ["Panel de la administración", "Simulador de vecino"], label_visibility="collapsed")
-    consorcios = servicio.consorcios()
+    consorcios = servicio.consorcios(sesion)
     if not consorcios:
-        st.error("La base está vacía. Corré `python scripts/seed_db.py`.")
+        st.info("Tu administración todavía no tiene edificios.")
+        st.button("Cerrar sesión", on_click=cerrar_sesion, use_container_width=True, key="logout")
         st.stop()
     nombres = {c["consorcio_id"]: c["nombre"] for c in consorcios}
     consorcio_id = st.selectbox("Consorcio", list(nombres), format_func=nombres.get)
-    admin_id = st.text_input("Quién decide", value="laura", help="Queda registrado en cada decisión")
     st.button("🔄 Actualizar", use_container_width=True)
+    st.button("Cerrar sesión", on_click=cerrar_sesion, use_container_width=True, key="logout")
 
 
 # ---------------------------------------------------------------- detalle de un caso
@@ -106,7 +145,7 @@ def mostrar_confirmacion(det: servicio.DetalleCaso) -> None:
         c1, c2 = st.columns(2)
         if c1.button("✅ Confirmar", type="primary", use_container_width=True, key=f"conf-{caso_id}"):
             try:
-                caso = servicio.decidir(caso_id, decision)
+                caso = servicio.decidir(sesion, caso_id, decision)
                 st.session_state.pop("pendiente", None)
                 st.session_state.aviso = f"Caso #{caso_id}: {ESTADOS[caso.estado]}"
             except ValueError:
@@ -142,14 +181,18 @@ def mostrar_acciones(det: servicio.DetalleCaso) -> None:
         st.caption("Cargá el motivo para poder seguir.")
     if st.button("Revisar y confirmar →", type="primary", disabled=falta_motivo, key=f"rev-{caso_id}"):
         try:
-            st.session_state.pendiente = (caso_id, servicio.armar_decision(accion, admin_id, mensaje, motivo))
+            st.session_state.pendiente = (caso_id, servicio.armar_decision(accion, sesion, mensaje, motivo))
             st.rerun()
         except ValidationError as e:
             st.error(e.errors()[0]["msg"].removeprefix("Value error, "))
 
 
 def mostrar_caso(caso_id: int) -> None:
-    det = servicio.detalle_caso(caso_id)
+    try:
+        det = servicio.detalle_caso(sesion, caso_id)
+    except servicio.NoEncontrado:
+        st.warning("Ese caso no existe.")
+        return
     caso, r = det.caso, det.caso.reclamo
     st.header(f"Caso #{caso.caso_id} · {det.vecino['unidad']}")
     st.markdown(f"{ESTADOS[caso.estado]} · {det.vecino['nombre']} · {det.vecino['telefono']}")
@@ -206,7 +249,11 @@ def mostrar_caso(caso_id: int) -> None:
 
 
 def mostrar_derivacion(der_id: int) -> None:
-    d = servicio.derivacion(der_id)
+    try:
+        d = servicio.derivacion(sesion, der_id)
+    except servicio.NoEncontrado:
+        st.warning("Esa consulta no existe.")
+        return
     v = d["vecino"]
     titulos = {"urgencia": "🚨 Urgencia", "sin_fuente": "❓ Consulta sin fuente",
                "hablar_con_admin": "🙋 Pide hablar con una persona", "no_entendido": "🙋 El bot no entendió"}
@@ -222,11 +269,11 @@ def mostrar_derivacion(der_id: int) -> None:
                          key=f"resp-{der_id}")
     c1, c2 = st.columns(2)
     if c1.button("Enviar respuesta", type="primary", disabled=not texto.strip(), key=f"env-{der_id}"):
-        servicio.responder_derivacion(der_id, texto, admin_id)
+        servicio.responder_derivacion(sesion, der_id, texto)
         st.session_state.aviso = "Respuesta encolada para el vecino."
         st.rerun()
     if c2.button("Marcar como resuelta sin responder", key=f"desc-{der_id}"):
-        servicio.descartar_derivacion(der_id, admin_id)
+        servicio.descartar_derivacion(sesion, der_id)
         st.rerun()
 
 
@@ -238,7 +285,7 @@ def vista_panel() -> None:
     izq, der = st.columns([1, 2], gap="large")
     with izq:
         st.subheader("Bandeja")
-        grupos = servicio.bandeja(consorcio_id)
+        grupos = servicio.bandeja(sesion, consorcio_id)
         for clave, titulo in servicio.GRUPOS:
             items = grupos[clave]
             st.markdown(f"**{titulo}** ({len(items)})")
@@ -250,7 +297,7 @@ def vista_panel() -> None:
                           type="primary" if clave == "urgencias" else "secondary",
                           on_click=seleccionar, args=(it.tipo, it.id))
         with st.expander("Historial de casos"):
-            for c in servicio.historial(consorcio_id):
+            for c in servicio.historial(sesion, consorcio_id):
                 st.button(f"#{c['caso_id']} · {ESTADOS[EstadoCaso(c['estado'])]}", key=f"hist-{c['caso_id']}",
                           use_container_width=True, on_click=seleccionar, args=("caso", c["caso_id"]))
     with der:
@@ -272,9 +319,10 @@ def vista_simulador() -> None:
     st.caption("Para probar sin Telegram: usa el mismo runtime que el bot. Los mensajes que la administración "
                "aprueba en el panel aparecen acá.")
     conn = get_conn()
-    vecinos = [dict(f) for f in conn.execute(
-        """SELECT v.telefono, v.nombre, u.unidad FROM vecinos v JOIN unidades u USING (unidad_id)
-           WHERE u.consorcio_id = ? ORDER BY u.piso, u.depto""", (consorcio_id,))]
+    vecinos = servicio.vecinos(sesion, consorcio_id)
+    if not vecinos:
+        st.info("Este edificio todavía no tiene vecinos cargados.")
+        return
     tel = st.selectbox("Vecino", [v["telefono"] for v in vecinos],
                        format_func=lambda t: next(f"{v['unidad']} · {v['nombre']}" for v in vecinos if v["telefono"] == t),
                        index=next((i for i, v in enumerate(vecinos) if v["unidad"] == "4°B"), 0))

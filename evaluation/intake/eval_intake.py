@@ -55,6 +55,7 @@ def correr() -> tuple[list[dict], dict]:
     from scripts.seed_db import seed
 
     tmp = Path(tempfile.mkdtemp())
+    os.environ["ELISEO_DB_URL"] = ""  # nunca la base de Supabase del .env
     os.environ.setdefault("ELISEO_DB_PATH", str(tmp / "eliseo.db"))
     if not Path(os.environ["ELISEO_DB_PATH"]).exists():
         seed(Path(os.environ["ELISEO_DB_PATH"]))

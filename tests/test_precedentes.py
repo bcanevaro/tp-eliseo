@@ -7,6 +7,7 @@ from eliseo import vectores
 from eliseo.agentes.mediador import nodos, precedentes
 from eliseo.grafo import runtime
 from eliseo.panel import servicio
+from tests.cuentas_demo import app_logueada, sesion_demo
 from eliseo.plataforma.db import get_conn
 from eliseo.schemas import Adjunto, Caso, EstadoCaso, MensajeEntrante, ReclamoBorrador
 
@@ -55,7 +56,8 @@ class IndiceFalso:
 @pytest.fixture
 def otro_consorcio(conn):
     """Otro consorcio con un precedente casi idéntico al PREC-2201 (misma columna, mismo tipo)."""
-    conn.execute("INSERT INTO consorcios VALUES ('OTRO', 'Otro', 'Calle 1', 'Adm X', 'X', '911')")
+    conn.execute("INSERT INTO consorcios (consorcio_id, nombre, direccion, administracion, administradora, "
+                 "telefono_emergencias) VALUES ('OTRO', 'Otro', 'Calle 1', 'Adm X', 'X', '911')")
     conn.execute("INSERT INTO unidades VALUES ('OTRO-3B', 'OTRO', '3°B', 3, 'B', '0.05')")
     conn.execute(
         """INSERT INTO precedentes (prec_id, consorcio_id, unidad_id, tipo, ubicacion, descripcion, resolucion,
@@ -206,7 +208,7 @@ def _prec_de(caso_id):
 # Scenario: Dictamen aprobado
 def test_aprobado_aparece_en_la_consulta_siguiente(bot):
     caso_id = _reclamo(bot)
-    servicio.decidir(caso_id, servicio.armar_decision("APROBAR", "laura"))
+    servicio.decidir(sesion_demo(), caso_id, servicio.armar_decision("APROBAR", sesion_demo()))
     prec = _prec_de(caso_id)
     assert prec["prec_id"] in _ids(precedentes.get_precedentes(CID, "R4520-4B", "filtracion", HUMEDAD))
 
@@ -216,7 +218,7 @@ def test_aprobado_se_indexa_con_su_metadata(bot, monkeypatch):
     monkeypatch.setattr(precedentes, "hay_pinecone", lambda: True)
     monkeypatch.setattr(precedentes, "get_index", lambda **kw: indice)
     caso_id = _reclamo(bot)
-    servicio.decidir(caso_id, servicio.armar_decision("APROBAR", "laura"))
+    servicio.decidir(sesion_demo(), caso_id, servicio.armar_decision("APROBAR", sesion_demo()))
     prec = _prec_de(caso_id)
     ((ns, record),) = indice.subidos
     assert ns == "precedentes" and record["_id"] == f"{CID}:{prec['prec_id']}"
@@ -231,7 +233,7 @@ def test_sin_pinecone_no_se_indexa(bot, monkeypatch):
 
     monkeypatch.setattr(precedentes, "get_index", no_llamar)
     caso_id = _reclamo(bot)
-    assert servicio.decidir(caso_id, servicio.armar_decision("APROBAR", "laura")).estado is EstadoCaso.APROBADO
+    assert servicio.decidir(sesion_demo(), caso_id, servicio.armar_decision("APROBAR", sesion_demo())).estado is EstadoCaso.APROBADO
 
 
 # Scenario: Falla la indexación
@@ -239,7 +241,7 @@ def test_falla_el_upsert_y_la_aprobacion_sigue(bot, monkeypatch):
     monkeypatch.setattr(precedentes, "hay_pinecone", lambda: True)
     monkeypatch.setattr(precedentes, "get_index", lambda **kw: IndiceFalso(falla=True))
     caso_id = _reclamo(bot)
-    caso = servicio.decidir(caso_id, servicio.armar_decision("APROBAR", "laura"))
+    caso = servicio.decidir(sesion_demo(), caso_id, servicio.armar_decision("APROBAR", sesion_demo()))
     assert caso.estado is EstadoCaso.APROBADO and _prec_de(caso_id) is not None
 
 
@@ -249,9 +251,9 @@ def test_rechazado_no_crea_ni_indexa_precedente(bot, monkeypatch):
     monkeypatch.setattr(precedentes, "hay_pinecone", lambda: True)
     monkeypatch.setattr(precedentes, "get_index", lambda **kw: indice)
     caso_id = _reclamo(bot)
-    servicio.decidir(caso_id, servicio.armar_decision("RECHAZAR", "laura", motivo="falta inspección"))
+    servicio.decidir(sesion_demo(), caso_id, servicio.armar_decision("RECHAZAR", sesion_demo(), motivo="falta inspección"))
     assert _prec_de(caso_id) is None and indice.subidos == []
-    (decision,) = servicio.detalle_caso(caso_id).decisiones
+    (decision,) = servicio.detalle_caso(sesion_demo(), caso_id).decisiones
     assert decision["motivo"] == "falta inspección"
 
 

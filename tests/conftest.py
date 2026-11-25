@@ -10,6 +10,16 @@ def sin_red(request, monkeypatch):
     # Los tests no mandan trazas a LangSmith aunque el .env tenga LANGSMITH_TRACING=true.
     monkeypatch.setenv("LANGSMITH_TRACING", "false")
     monkeypatch.setenv("LANGCHAIN_TRACING_V2", "false")
+    # Los tests nunca escriben en la base de Supabase del .env: usan un SQLite temporal (o, en el
+    # job de Postgres del CI, la base que indique ELISEO_TEST_DB_URL).
+    from eliseo import config
+
+    config._cargar()
+    monkeypatch.delenv("ELISEO_DB_URL", raising=False)
+    # Login local siempre (aunque el .env tenga Supabase) y bcrypt rápido.
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
+    monkeypatch.setenv("ELISEO_BCRYPT_ROUNDS", "4")
     if request.node.get_closest_marker("pinecone"):
         yield
         return
@@ -31,11 +41,18 @@ def sin_red(request, monkeypatch):
 @pytest.fixture
 def db_path(tmp_path, monkeypatch):
     """Base y checkpoints en un directorio temporal, recién sembrados."""
+    import os
+
     path = tmp_path / "eliseo.db"
     monkeypatch.setenv("ELISEO_DB_PATH", str(path))
     monkeypatch.setenv("ELISEO_CHECKPOINT_DB", str(tmp_path / "grafos.db"))
     from scripts.seed_db import seed
 
+    if url := os.environ.get("ELISEO_TEST_DB_URL"):
+        # Job de Postgres del CI: la misma suite contra una base Postgres descartable.
+        monkeypatch.setenv("ELISEO_DB_URL", url)
+        seed(url)
+        return url
     seed(path)
     return path
 

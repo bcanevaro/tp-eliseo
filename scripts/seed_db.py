@@ -6,13 +6,15 @@ grafos, porque quedarían apuntando a casos que ya no existen.
     python scripts/seed_db.py
 """
 import json
+import re
 import sys
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from eliseo.config import CONSORCIOS_DIR, checkpoint_db_path, db_path  # noqa: E402
+from eliseo.config import CONSORCIOS_DIR, checkpoint_db_path, db_url, env  # noqa: E402
+from eliseo.cuentas import crear_administracion, crear_administrador  # noqa: E402
 from eliseo.plataforma.db import borrar_todo, conectar, crear_esquema  # noqa: E402
 
 CENTAVO = Decimal("0.01")
@@ -30,7 +32,12 @@ def _prorratear(total: Decimal, unidades: list[dict]) -> dict[str, Decimal]:
 def cargar_consorcio(conn, datos: dict) -> None:
     c = datos["consorcio"]
     cid = c["consorcio_id"]
-    conn.execute("INSERT INTO consorcios VALUES (:consorcio_id, :nombre, :direccion, :administracion, :administradora, :telefono_emergencias)", c)
+    aid = crear_administracion(c["administracion"], conn)
+    conn.execute(
+        """INSERT INTO consorcios (consorcio_id, nombre, direccion, administracion, administradora,
+                                   telefono_emergencias, administracion_id)
+           VALUES (:consorcio_id, :nombre, :direccion, :administracion, :administradora, :telefono_emergencias, :aid)""",
+        {**c, "aid": aid})
     for u in datos["unidades"]:
         conn.execute("INSERT INTO unidades VALUES (:unidad_id, :consorcio_id, :unidad, :piso, :depto, :coeficiente)",
                      {**u, "consorcio_id": cid})
@@ -67,21 +74,54 @@ def cargar_consorcio(conn, datos: dict) -> None:
             {**p, "consorcio_id": cid})
 
 
-def seed(path: Path | None = None, raiz: Path = CONSORCIOS_DIR) -> Path:
-    path = Path(path or db_path())
-    path.parent.mkdir(parents=True, exist_ok=True)
-    conn = conectar(path)
+TABLAS_CHECKPOINT = ("checkpoint_writes", "checkpoint_blobs", "checkpoints")
+
+# Cuenta de prueba de la Administración Méndez (spec datos-ficticios). Ficticia: se puede cambiar
+# con ELISEO_DEMO_ADMIN_EMAIL y ELISEO_DEMO_ADMIN_PASSWORD. Usa el login local (bcrypt), así la
+# demo entra aunque Supabase Auth no esté configurado.
+DEMO_ADMINISTRACION = "administracion-mendez"
+
+
+def cuenta_demo() -> tuple[str, str]:
+    return (env("ELISEO_DEMO_ADMIN_EMAIL", default="admin@demo.eliseo.test"),
+            env("ELISEO_DEMO_ADMIN_PASSWORD", default="eliseo-demo"))
+
+
+def cargar_cuenta_demo(conn) -> None:
+    email, password = cuenta_demo()
+    if conn.execute("SELECT 1 FROM administradores WHERE email = ?", (email,)).fetchone() is None:
+        crear_administrador(DEMO_ADMINISTRACION, email, "Laura Méndez", password, conn, con_supabase=False)
+
+
+def seed(destino: Path | str | None = None, raiz: Path = CONSORCIOS_DIR) -> Path | str:
+    """`destino`: la ruta de un SQLite, una URL, o None para la base configurada."""
+    destino = destino or db_url()
+    conn = conectar(destino)
     borrar_todo(conn)
     crear_esquema(conn)
     for archivo in sorted(raiz.glob("*/plataforma.json")):
         cargar_consorcio(conn, json.loads(archivo.read_text(encoding="utf-8")))
-    conn.commit()
+    cargar_cuenta_demo(conn)
+    if conn.dialecto == "postgresql":
+        # Los checkpoints viven en la misma base: se vacían (sin borrar las tablas, que el
+        # checkpointer ya creó) para que no apunten a casos que ya no existen.
+        existentes = {f[0] for f in conn.execute(
+            "SELECT tablename FROM pg_tables WHERE schemaname = current_schema()").fetchall()}
+        for tabla in TABLAS_CHECKPOINT:
+            if tabla in existentes:
+                conn.execute(f"DELETE FROM {tabla}")
+    else:
+        checkpoints = checkpoint_db_path()
+        for sufijo in ("", "-wal", "-shm"):
+            Path(f"{checkpoints}{sufijo}").unlink(missing_ok=True)
     conn.close()
-    checkpoints = checkpoint_db_path()
-    for sufijo in ("", "-wal", "-shm"):
-        Path(f"{checkpoints}{sufijo}").unlink(missing_ok=True)
-    return path
+    return destino
+
+
+def _mostrar(destino) -> str:
+    """La URL sin la contraseña, para imprimirla."""
+    return re.sub(r"://([^:/@]+):[^@]+@", r"://\1:***@", str(destino))
 
 
 if __name__ == "__main__":
-    print(f"Base creada en {seed()}")
+    print(f"Base creada en {_mostrar(seed())}")

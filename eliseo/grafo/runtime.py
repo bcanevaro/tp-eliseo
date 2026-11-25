@@ -15,11 +15,11 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.types import Command
 
 import eliseo.schemas as schemas
-from eliseo.config import checkpoint_db_path
+from eliseo.config import checkpoint_db_path, db_url, es_postgres
 from eliseo.grafo import caso as grafo_caso
 from eliseo.grafo import conversacion as grafo_conversacion
 from eliseo.plataforma import escritura, lectura
-from eliseo.plataforma.db import get_conn
+from eliseo.plataforma.db import activar_rls, get_conn
 from eliseo.schemas import DecisionAdmin, MensajeEntrante, MensajeSaliente
 
 
@@ -30,20 +30,39 @@ def _tipos_serializables() -> list[tuple[str, str]]:
 
 
 @lru_cache(maxsize=None)
-def _checkpointer(path: str) -> SqliteSaver:
+def _checkpointer(destino: str):
+    """Con Postgres, los checkpoints van a la misma base (design D10 de cuentas-administracion),
+    así el bot y el panel pueden correr en máquinas distintas; con SQLite, a su archivo aparte."""
     serde = JsonPlusSerializer(allowed_msgpack_modules=_tipos_serializables())
-    return SqliteSaver(sqlite3.connect(path, check_same_thread=False), serde=serde)
+    if es_postgres(destino):
+        from langgraph.checkpoint.postgres import PostgresSaver
+        from psycopg import Connection
+        from psycopg.rows import dict_row
+
+        # prepare_threshold=None: el pooler de Supabase no admite sentencias preparadas.
+        conn = Connection.connect(destino.replace("postgresql+psycopg://", "postgresql://"),
+                                  autocommit=True, prepare_threshold=None, row_factory=dict_row)
+        saver = PostgresSaver(conn, serde=serde)
+        saver.setup()
+        activar_rls(get_conn(), ("checkpoints", "checkpoint_blobs", "checkpoint_writes", "checkpoint_migrations"))
+        return saver
+    return SqliteSaver(sqlite3.connect(destino, check_same_thread=False), serde=serde)
 
 
 @lru_cache(maxsize=None)
-def _grafos(path: str):
-    cp = _checkpointer(path)
+def _grafos(destino: str):
+    cp = _checkpointer(destino)
     return grafo_conversacion.construir(cp), grafo_caso.construir(cp)
+
+
+def destino_checkpoints() -> str:
+    url = db_url()
+    return url if es_postgres(url) else str(checkpoint_db_path())
 
 
 def grafos():
     """(conversación, caso) compilados sobre el checkpointer configurado."""
-    return _grafos(str(checkpoint_db_path()))
+    return _grafos(destino_checkpoints())
 
 
 def thread_conversacion(msg: MensajeEntrante) -> str:

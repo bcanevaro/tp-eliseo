@@ -5,9 +5,9 @@ Ningún agente llama a estas funciones directamente: las usan los nodos de códi
 borrador de dictamen.
 """
 import json
-import sqlite3
 from datetime import datetime, timezone
 
+from eliseo.plataforma.db import Conexion
 from eliseo.schemas import Caso, DecisionAdmin, Dictamen, EstadoCaso, MensajeSaliente, ReclamoBorrador
 
 
@@ -15,7 +15,7 @@ def _ahora() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def vincular_canal(conn: sqlite3.Connection, canal: str, usuario_canal_id: str, telefono: str,
+def vincular_canal(conn: Conexion, canal: str, usuario_canal_id: str, telefono: str,
                    chat_id: str | None = None) -> None:
     conn.execute(
         """INSERT INTO vinculos_canal (canal, usuario_canal_id, telefono, chat_id) VALUES (?, ?, ?, ?)
@@ -25,17 +25,18 @@ def vincular_canal(conn: sqlite3.Connection, canal: str, usuario_canal_id: str, 
     conn.commit()
 
 
-def registrar_caso(conn: sqlite3.Connection, caso: Caso) -> Caso:
+def registrar_caso(conn: Conexion, caso: Caso) -> Caso:
     ahora = _ahora()
     cur = conn.execute(
-        "INSERT INTO casos (consorcio_id, unidad_id, reclamo_json, estado, creado, actualizado) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO casos (consorcio_id, unidad_id, reclamo_json, estado, creado, actualizado) VALUES (?, ?, ?, ?, ?, ?)"
+        " RETURNING caso_id",
         (caso.consorcio_id, caso.unidad_id, caso.reclamo.model_dump_json(), caso.estado.value, ahora, ahora),
     )
     conn.commit()
-    return caso.model_copy(update={"caso_id": cur.lastrowid})
+    return caso.model_copy(update={"caso_id": cur.fetchone()["caso_id"]})
 
 
-def obtener_caso(conn: sqlite3.Connection, caso_id: int) -> Caso | None:
+def obtener_caso(conn: Conexion, caso_id: int) -> Caso | None:
     f = conn.execute("SELECT * FROM casos WHERE caso_id = ?", (caso_id,)).fetchone()
     if not f:
         return None
@@ -44,7 +45,7 @@ def obtener_caso(conn: sqlite3.Connection, caso_id: int) -> Caso | None:
                 creado=f["creado"], actualizado=f["actualizado"])
 
 
-def cambiar_estado(conn: sqlite3.Connection, caso_id: int, nuevo: EstadoCaso) -> Caso:
+def cambiar_estado(conn: Conexion, caso_id: int, nuevo: EstadoCaso) -> Caso:
     """Valida la transición con la máquina de estados del contrato antes de escribir."""
     caso = obtener_caso(conn, caso_id)
     if caso is None:
@@ -56,21 +57,22 @@ def cambiar_estado(conn: sqlite3.Connection, caso_id: int, nuevo: EstadoCaso) ->
     return caso
 
 
-def guardar_dictamen(conn: sqlite3.Connection, caso_id: int, dictamen: Dictamen,
+def guardar_dictamen(conn: Conexion, caso_id: int, dictamen: Dictamen,
                      verificacion: dict | None = None) -> int:
     """Escritura aditiva: cada vuelta del Mediador es una versión nueva, nunca se pisa."""
     (version,) = conn.execute(
         "SELECT COALESCE(MAX(version), 0) + 1 FROM dictamenes WHERE caso_id = ?", (caso_id,)
     ).fetchone()
     cur = conn.execute(
-        "INSERT INTO dictamenes (caso_id, version, dictamen_json, verificacion_json) VALUES (?, ?, ?, ?)",
+        "INSERT INTO dictamenes (caso_id, version, dictamen_json, verificacion_json) VALUES (?, ?, ?, ?)"
+        " RETURNING dictamen_id",
         (caso_id, version, dictamen.model_dump_json(), json.dumps(verificacion) if verificacion else None),
     )
     conn.commit()
-    return cur.lastrowid
+    return cur.fetchone()["dictamen_id"]
 
 
-def guardar_decision(conn: sqlite3.Connection, dictamen_id: int, caso_id: int, decision: DecisionAdmin) -> None:
+def guardar_decision(conn: Conexion, dictamen_id: int, caso_id: int, decision: DecisionAdmin) -> None:
     conn.execute(
         "INSERT INTO decisiones (dictamen_id, caso_id, accion, admin_id, mensaje_final, motivo) VALUES (?, ?, ?, ?, ?, ?)",
         (dictamen_id, caso_id, decision.accion.value, decision.admin_id, decision.mensaje_final, decision.motivo),
@@ -78,44 +80,45 @@ def guardar_decision(conn: sqlite3.Connection, dictamen_id: int, caso_id: int, d
     conn.commit()
 
 
-def crear_derivacion(conn: sqlite3.Connection, tipo: str, texto: str, *, consorcio_id: str | None = None,
+def crear_derivacion(conn: Conexion, tipo: str, texto: str, *, consorcio_id: str | None = None,
                      unidad_id: str | None = None, telefono: str | None = None, detalle: dict | None = None) -> int:
     cur = conn.execute(
-        "INSERT INTO derivaciones (consorcio_id, unidad_id, telefono, tipo, texto, detalle_json) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO derivaciones (consorcio_id, unidad_id, telefono, tipo, texto, detalle_json) VALUES (?, ?, ?, ?, ?, ?)"
+        " RETURNING id",
         (consorcio_id, unidad_id, telefono, tipo, texto, json.dumps(detalle, default=str) if detalle else None),
     )
     conn.commit()
-    return cur.lastrowid
+    return cur.fetchone()["id"]
 
 
-def encolar_mensaje(conn: sqlite3.Connection, destino: str, mensaje: MensajeSaliente,
+def encolar_mensaje(conn: Conexion, destino: str, mensaje: MensajeSaliente,
                     clave: str | None = None) -> bool:
     """Deja un mensaje para que lo envíe el bot. Con `clave`, encolar dos veces no duplica.
     Devuelve True si quedó encolado ahora."""
     cur = conn.execute(
-        "INSERT OR IGNORE INTO outbox (destino, mensaje_json, clave) VALUES (?, ?, ?)",
+        "INSERT INTO outbox (destino, mensaje_json, clave) VALUES (?, ?, ?) ON CONFLICT (clave) DO NOTHING",
         (destino, mensaje.model_dump_json(), clave),
     )
     conn.commit()
     return cur.rowcount == 1
 
 
-def outbox_pendientes(conn: sqlite3.Connection) -> list[tuple[int, str, MensajeSaliente]]:
+def outbox_pendientes(conn: Conexion) -> list[tuple[int, str, MensajeSaliente]]:
     filas = conn.execute("SELECT id, destino, mensaje_json FROM outbox WHERE enviado IS NULL ORDER BY id").fetchall()
     return [(f["id"], f["destino"], MensajeSaliente.model_validate_json(f["mensaje_json"])) for f in filas]
 
 
-def marcar_enviado(conn: sqlite3.Connection, outbox_id: int) -> None:
+def marcar_enviado(conn: Conexion, outbox_id: int) -> None:
     conn.execute("UPDATE outbox SET enviado = ? WHERE id = ?", (_ahora(), outbox_id))
     conn.commit()
 
 
-def resolver_derivacion(conn: sqlite3.Connection, derivacion_id: int, estado: str = "respondida") -> None:
+def resolver_derivacion(conn: Conexion, derivacion_id: int, estado: str = "respondida") -> None:
     conn.execute("UPDATE derivaciones SET estado = ? WHERE id = ?", (estado, derivacion_id))
     conn.commit()
 
 
-def crear_precedente(conn: sqlite3.Connection, *, consorcio_id: str, unidad_id: str, tipo: str,
+def crear_precedente(conn: Conexion, *, consorcio_id: str, unidad_id: str, tipo: str,
                      ubicacion: str | None, descripcion: str, resolucion: str, responsable: str,
                      caso_id: int, dictamen_id: int, procedencia: str) -> tuple[str, bool]:
     """Memoria episódica (spec precedentes): solo se llama desde la ejecución de un dictamen
@@ -129,7 +132,7 @@ def crear_precedente(conn: sqlite3.Connection, *, consorcio_id: str, unidad_id: 
     conn.execute(
         """INSERT INTO precedentes (prec_id, consorcio_id, unidad_id, tipo, ubicacion, descripcion, resolucion,
                                     responsable, fecha, caso_id, dictamen_id, procedencia)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, date('now'), ?, ?, ?)""",
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_DATE, ?, ?, ?)""",
         (prec_id, consorcio_id, unidad_id, tipo, ubicacion, descripcion, resolucion, responsable,
          caso_id, dictamen_id, procedencia),
     )
@@ -137,10 +140,11 @@ def crear_precedente(conn: sqlite3.Connection, *, consorcio_id: str, unidad_id: 
     return prec_id, True
 
 
-def crear_pedido(conn: sqlite3.Connection, caso_id: int, dictamen_id: int, tipo: str, descripcion: str) -> tuple[int, bool]:
+def crear_pedido(conn: Conexion, caso_id: int, dictamen_id: int, tipo: str, descripcion: str) -> tuple[int, bool]:
     """Idempotente por (dictamen_id, tipo). Devuelve (id, creado_ahora)."""
     cur = conn.execute(
-        "INSERT OR IGNORE INTO pedidos (caso_id, dictamen_id, tipo, descripcion) VALUES (?, ?, ?, ?)",
+        "INSERT INTO pedidos (caso_id, dictamen_id, tipo, descripcion) VALUES (?, ?, ?, ?)"
+        " ON CONFLICT (dictamen_id, tipo) DO NOTHING",
         (caso_id, dictamen_id, tipo, descripcion),
     )
     conn.commit()

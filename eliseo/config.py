@@ -34,6 +34,16 @@ def db_path() -> Path:
     return Path(env("ELISEO_DB_PATH", default=str(DATA_DIR / "eliseo.db")))
 
 
+def db_url() -> str:
+    """URL de SQLAlchemy de la base (design D3 de cuentas-administracion): Postgres de Supabase si
+    está ELISEO_DB_URL; si no, el SQLite local de `db_path()`."""
+    return env("ELISEO_DB_URL", default="") or f"sqlite:///{db_path().as_posix()}"
+
+
+def es_postgres(url: str | None = None) -> bool:
+    return (url or db_url()).startswith("postgresql")
+
+
 def checkpoint_db_path() -> Path:
     """Checkpoints de LangGraph, compartidos por el bot y el panel (design D3)."""
     return Path(env("ELISEO_CHECKPOINT_DB", default=str(DATA_DIR / "grafos.db")))

@@ -5,16 +5,21 @@ La interfaz (`app.py`) solo dibuja lo que devuelve este módulo, así que todo l
 
 El panel es el único approval boundary: es el único lugar del sistema que retoma un caso
 con una `DecisionAdmin`.
+
+Aislamiento por administración (spec cuentas-admin, design D5): toda función recibe la `Sesion`
+y filtra por su administración dentro de la consulta. Un caso, una derivación o un consorcio de
+otra administración se trata como inexistente (`NoEncontrado`), sin distinguir "no existe" de
+"no es tuyo".
 """
 import json
-import sqlite3
 from dataclasses import dataclass, field
 
 from eliseo.corpus import cargar_corpus
+from eliseo.cuentas import Sesion
 from eliseo.ejecucion import con_numero_de_caso, mensaje_aprobado, tipo_pedido
 from eliseo.grafo import runtime
 from eliseo.plataforma import escritura, lectura
-from eliseo.plataforma.db import get_conn
+from eliseo.plataforma.db import Conexion, get_conn
 from eliseo.schemas import AccionAdmin, Caso, DecisionAdmin, Dictamen, EstadoCaso, MensajeSaliente, tipo_de_referencia
 
 # Orden de la bandeja: las urgencias siempre primero.
@@ -63,12 +68,58 @@ class VistaPrevia:
     de_la_administracion: bool
 
 
-def _conn(conn: sqlite3.Connection | None) -> sqlite3.Connection:
+class NoEncontrado(KeyError):
+    """No existe, o es de otra administración (para el panel es lo mismo)."""
+
+
+def _conn(conn: Conexion | None) -> Conexion:
     return conn or get_conn()
 
 
-def consorcios(conn=None) -> list[dict]:
-    return [dict(f) for f in _conn(conn).execute("SELECT consorcio_id, nombre FROM consorcios ORDER BY nombre")]
+def consorcios(sesion: Sesion, conn=None) -> list[dict]:
+    """Los consorcios activos de la administración de la sesión."""
+    return [dict(f) for f in _conn(conn).execute(
+        "SELECT consorcio_id, nombre FROM consorcios WHERE administracion_id = ? AND activo = 1 ORDER BY nombre",
+        (sesion.administracion_id,))]
+
+
+def _consorcio_de(conn, sesion: Sesion, consorcio_id: str | None) -> str:
+    """El mismo consorcio_id si es de la sesión y está activo; si no, NoEncontrado."""
+    ok = consorcio_id and conn.execute(
+        "SELECT 1 FROM consorcios WHERE consorcio_id = ? AND administracion_id = ? AND activo = 1",
+        (consorcio_id, sesion.administracion_id)).fetchone()
+    if not ok:
+        raise NoEncontrado(f"No existe el consorcio {consorcio_id}")
+    return consorcio_id
+
+
+def _caso_de(conn, sesion: Sesion, caso_id: int) -> Caso:
+    caso = escritura.obtener_caso(conn, caso_id)
+    if caso is None:
+        raise NoEncontrado(f"No existe el caso {caso_id}")
+    try:
+        _consorcio_de(conn, sesion, caso.consorcio_id)
+    except NoEncontrado:
+        raise NoEncontrado(f"No existe el caso {caso_id}") from None
+    return caso
+
+
+def _derivacion_de(conn, sesion: Sesion, derivacion_id: int):
+    d = conn.execute("SELECT * FROM derivaciones WHERE id = ?", (derivacion_id,)).fetchone()
+    try:
+        _consorcio_de(conn, sesion, d["consorcio_id"] if d else None)
+    except NoEncontrado:
+        raise NoEncontrado(f"No existe la derivación {derivacion_id}") from None
+    return d
+
+
+def vecinos(sesion: Sesion, consorcio_id: str, conn=None) -> list[dict]:
+    """Vecinos de un consorcio de la sesión (para el simulador y el padrón)."""
+    conn = _conn(conn)
+    _consorcio_de(conn, sesion, consorcio_id)
+    return [dict(f) for f in conn.execute(
+        """SELECT v.telefono, v.nombre, u.unidad, u.unidad_id FROM vecinos v JOIN unidades u USING (unidad_id)
+           WHERE u.consorcio_id = ? ORDER BY u.piso, u.depto""", (consorcio_id,))]
 
 
 def _vecino(conn, unidad_id: str | None, telefono: str | None = None) -> dict:
@@ -79,8 +130,9 @@ def _vecino(conn, unidad_id: str | None, telefono: str | None = None) -> dict:
     return dict(fila) if fila else {"nombre": "?", "telefono": telefono, "unidad": unidad_id or "?"}
 
 
-def bandeja(consorcio_id: str, conn=None) -> dict[str, list[Item]]:
+def bandeja(sesion: Sesion, consorcio_id: str, conn=None) -> dict[str, list[Item]]:
     conn = _conn(conn)
+    _consorcio_de(conn, sesion, consorcio_id)
     grupos: dict[str, list[Item]] = {g: [] for g, _ in GRUPOS}
 
     derivaciones = conn.execute(
@@ -105,9 +157,11 @@ def bandeja(consorcio_id: str, conn=None) -> dict[str, list[Item]]:
     return grupos
 
 
-def historial(consorcio_id: str, conn=None, limite: int = 20) -> list[dict]:
+def historial(sesion: Sesion, consorcio_id: str, conn=None, limite: int = 20) -> list[dict]:
     """Casos ya decididos o en análisis, para consulta."""
-    filas = _conn(conn).execute(
+    conn = _conn(conn)
+    _consorcio_de(conn, sesion, consorcio_id)
+    filas = conn.execute(
         """SELECT caso_id, unidad_id, estado, actualizado FROM casos
            WHERE consorcio_id = ? AND estado NOT IN (?, ?) ORDER BY actualizado DESC LIMIT ?""",
         (consorcio_id, EstadoCaso.PENDIENTE_APROBACION.value, EstadoCaso.INCOMPLETO.value, limite)).fetchall()
@@ -128,11 +182,9 @@ def _texto_fuente(conn, consorcio_id: str, ref: str) -> str:
     return ""
 
 
-def detalle_caso(caso_id: int, conn=None) -> DetalleCaso:
+def detalle_caso(sesion: Sesion, caso_id: int, conn=None) -> DetalleCaso:
     conn = _conn(conn)
-    caso = escritura.obtener_caso(conn, caso_id)
-    if caso is None:
-        raise KeyError(f"No existe el caso {caso_id}")
+    caso = _caso_de(conn, sesion, caso_id)
     fila = conn.execute(
         "SELECT * FROM dictamenes WHERE caso_id = ? ORDER BY version DESC LIMIT 1", (caso_id,)).fetchone()
     dictamen = Dictamen.model_validate_json(fila["dictamen_json"]) if fila else None
@@ -156,12 +208,13 @@ def detalle_caso(caso_id: int, conn=None) -> DetalleCaso:
         precedente=dict(prec) if prec else None, esperando_decision=esperando)
 
 
-def armar_decision(accion: AccionAdmin | str, admin_id: str, mensaje_final: str | None = None,
+def armar_decision(accion: AccionAdmin | str, sesion: Sesion, mensaje_final: str | None = None,
                    motivo: str | None = None) -> DecisionAdmin:
-    """Valida con el contrato: rechazar exige motivo y modificar exige el mensaje editado."""
+    """Valida con el contrato: rechazar exige motivo y modificar exige el mensaje editado.
+    El autor es la cuenta de la sesión (spec cuentas-admin, "Decisión firmada por la cuenta")."""
     accion = AccionAdmin(accion)
     return DecisionAdmin(
-        accion=accion, admin_id=admin_id,
+        accion=accion, admin_id=sesion.email,
         mensaje_final=(mensaje_final or None) if accion is not AccionAdmin.APROBAR else None,
         motivo=(motivo or None) if accion is AccionAdmin.RECHAZAR else None,
     )
@@ -180,34 +233,39 @@ def vista_previa(detalle: DetalleCaso, decision: DecisionAdmin, conn=None) -> Vi
                        f"{_NOMBRE_PEDIDO[tipo_pedido(d)]}: {d.recomendacion.accion}", False)
 
 
-def decidir(caso_id: int, decision: DecisionAdmin) -> Caso:
-    """Retoma el grafo del caso. Un segundo intento (doble click) falla sin ejecutar nada."""
+def decidir(sesion: Sesion, caso_id: int, decision: DecisionAdmin) -> Caso:
+    """Retoma el grafo del caso. Un segundo intento (doble click) falla sin ejecutar nada.
+    El autor queda siempre como la cuenta de la sesión, aunque la decisión diga otro."""
+    _caso_de(get_conn(), sesion, caso_id)
+    decision = decision.model_copy(update={"admin_id": sesion.email})
     final = runtime.retomar_caso(caso_id, decision)
     return final["caso"]
 
 
-def responder_derivacion(derivacion_id: int, texto: str, admin_id: str, conn=None) -> bool:
+def responder_derivacion(sesion: Sesion, derivacion_id: int, texto: str, conn=None) -> bool:
     """Respuesta manual al vecino por el mismo canal, marcada como de la administración."""
     conn = _conn(conn)
     if not texto.strip():
         raise ValueError("La respuesta no puede estar vacía")
-    d = conn.execute("SELECT * FROM derivaciones WHERE id = ?", (derivacion_id,)).fetchone()
-    if d is None or not d["telefono"]:
-        raise KeyError(f"No existe la derivación {derivacion_id} o no tiene teléfono")
+    d = _derivacion_de(conn, sesion, derivacion_id)
+    if not d["telefono"]:
+        raise NoEncontrado(f"La derivación {derivacion_id} no tiene teléfono")
     encolado = escritura.encolar_mensaje(conn, f"vecino:{d['telefono']}",
                                          MensajeSaliente(texto=texto.strip(), de_la_administracion=True),
                                          clave=f"derivacion:{derivacion_id}:respuesta")
-    escritura.resolver_derivacion(conn, derivacion_id, f"respondida por {admin_id}")
+    escritura.resolver_derivacion(conn, derivacion_id, f"respondida por {sesion.email}")
     return encolado
 
 
-def descartar_derivacion(derivacion_id: int, admin_id: str, conn=None) -> None:
-    escritura.resolver_derivacion(_conn(conn), derivacion_id, f"descartada por {admin_id}")
-
-
-def derivacion(derivacion_id: int, conn=None) -> dict:
+def descartar_derivacion(sesion: Sesion, derivacion_id: int, conn=None) -> None:
     conn = _conn(conn)
-    d = dict(conn.execute("SELECT * FROM derivaciones WHERE id = ?", (derivacion_id,)).fetchone())
+    _derivacion_de(conn, sesion, derivacion_id)
+    escritura.resolver_derivacion(conn, derivacion_id, f"descartada por {sesion.email}")
+
+
+def derivacion(sesion: Sesion, derivacion_id: int, conn=None) -> dict:
+    conn = _conn(conn)
+    d = dict(_derivacion_de(conn, sesion, derivacion_id))
     d["vecino"] = _vecino(conn, d["unidad_id"], d["telefono"])
     d["detalle"] = json.loads(d["detalle_json"]) if d.get("detalle_json") else None
     return d

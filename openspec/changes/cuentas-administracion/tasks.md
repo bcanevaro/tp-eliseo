@@ -1,19 +1,19 @@
 ## 1. Acceso a datos sin cambio de comportamiento (D3)
 
-- [ ] 1.1 Agregar `sqlalchemy`, `psycopg[binary]`, `supabase`, `bcrypt` y `langgraph-checkpoint-postgres` a `requirements.txt` y verificar que `uv pip install -r requirements.txt` instala sin conflictos en Python 3.12
-- [ ] 1.2 Declarar las tablas actuales con SQLAlchemy Core en `eliseo/plataforma/db.py` y crear el engine desde `ELISEO_DB_URL` (SQLite por defecto); verificar con `pytest` que la suite actual pasa sin cambios
-- [ ] 1.3 Pasar `plataforma/lectura.py`, `plataforma/escritura.py` y las consultas de `panel/servicio.py` y `agentes/` a SQLAlchemy con parámetros con nombre, sin cambiar firmas ni resultados; verificar que `pytest` y `python evaluation/e2e/correr.py` dan lo mismo que antes
-- [ ] 1.4 Elegir el checkpointer según la URL (`SqliteSaver` o `PostgresSaver`) en `grafo/runtime.py` y verificar con un test que un caso interrumpido se retoma desde otra conexión a la misma base
-- [ ] 1.5 Agregar al CI un job que corra `pytest` contra un servicio Postgres de GitHub Actions y verificar que pasa en los dos motores
+- [x] 1.1 Agregar `sqlalchemy`, `psycopg[binary]`, `supabase`, `bcrypt` y `langgraph-checkpoint-postgres` a `requirements.txt` y verificar que `uv pip install -r requirements.txt` instala sin conflictos en Python 3.12
+- [x] 1.2 Reemplazar la conexión `sqlite3` por una `Conexion` sobre SQLAlchemy con la misma interfaz, creada desde `ELISEO_DB_URL` (SQLite por defecto), con el esquema por motor; verificar con `pytest` que la suite actual pasa sin cambios
+- [x] 1.3 Pasar el SQL propio de SQLite (`INSERT OR IGNORE`, `lastrowid`, `date('now')`) al subconjunto común y hacer que las evaluaciones nunca usen la base del `.env`; verificar que `pytest` y `python evaluation/e2e/correr.py` dan lo mismo que antes
+- [x] 1.4 Elegir el checkpointer según la URL (`SqliteSaver` o `PostgresSaver`) en `grafo/runtime.py` y verificar con un test que un caso interrumpido se retoma desde otra conexión a la misma base (`test_grafo.py`, "simula reiniciar el proceso", en los dos motores)
+- [x] 1.5 Agregar al CI un job que corra `pytest` contra un servicio Postgres de GitHub Actions y verificar que pasa en los dos motores
 
 ## 2. Administraciones, cuentas y login (cuentas-admin, D4, D5)
 
-- [ ] 2.1 Agregar las tablas `administraciones` y `administradores` y la columna `consorcios.administracion_id` (y `activo`), migrando el texto `administracion` del consorcio de demo; test de que el Consorcio Rivadavia 4520 queda en la Administración Méndez
-- [ ] 2.2 Implementar `autenticar(email, password) -> Sesion | None` con las variantes Supabase Auth y local con `bcrypt`; tests de ingreso correcto, contraseña incorrecta (mismo mensaje que email inexistente) y cuenta sin administración
-- [ ] 2.3 Hacer que toda función de `panel/servicio.py` reciba la `Sesion` y filtre por administración; tests de los scenarios "Caso de otra administración" y "Selector de consorcio" con dos administraciones sembradas
-- [ ] 2.4 Agregar el formulario de ingreso y "Cerrar sesión" a `panel/app.py`, y reemplazar "Quién decide" por la cuenta de la sesión; verificar con `streamlit.testing.v1.AppTest` que sin sesión no se ve la bandeja y que la decisión queda con la cuenta como autora
-- [ ] 2.5 Escribir `scripts/alta_administracion.py` (administración y primer administrador) y verificar que la cuenta creada ingresa y ve el panel vacío
-- [ ] 2.6 Activar RLS sin políticas para `anon` en todas las tablas al crear el esquema en Postgres y verificar con la clave pública que una consulta a `vecinos` no devuelve filas
+- [x] 2.1 Agregar las tablas `administraciones` y `administradores` y la columna `consorcios.administracion_id` (y `activo`), migrando el texto `administracion` del consorcio de demo; test de que el Consorcio Rivadavia 4520 queda en la Administración Méndez
+- [x] 2.2 Implementar `autenticar(email, password) -> Sesion | None` con las variantes Supabase Auth y local con `bcrypt`; tests de ingreso correcto, contraseña incorrecta (mismo mensaje que email inexistente) y cuenta sin administración
+- [x] 2.3 Hacer que toda función de `panel/servicio.py` reciba la `Sesion` y filtre por administración; tests de los scenarios "Caso de otra administración" y "Selector de consorcio" con dos administraciones sembradas
+- [x] 2.4 Agregar el formulario de ingreso y "Cerrar sesión" a `panel/app.py`, y reemplazar "Quién decide" por la cuenta de la sesión; verificar con `streamlit.testing.v1.AppTest` que sin sesión no se ve la bandeja y que la decisión queda con la cuenta como autora
+- [x] 2.5 Escribir `scripts/alta_administracion.py` (administración y primer administrador) y verificar que la cuenta creada ingresa y ve el panel vacío
+- [x] 2.6 Activar RLS sin políticas para `anon` en todas las tablas al crear el esquema en Postgres y verificar con la clave pública que una consulta a `vecinos` no devuelve filas
 
 ## 3. Padrón de consorcios y vecinos (padron-consorcios, D11)
 

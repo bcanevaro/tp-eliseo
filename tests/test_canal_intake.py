@@ -22,6 +22,7 @@ from eliseo.canal.telegram import (
 )
 from eliseo.grafo import runtime
 from eliseo.panel import servicio
+from tests.cuentas_demo import app_logueada, sesion_demo
 from eliseo.plataforma import escritura, lectura
 from eliseo.plataforma.db import get_conn
 from eliseo.schemas import Intent, MensajeEntrante, MensajeSaliente, ReclamoBorrador, ResultadoIntake
@@ -96,7 +97,7 @@ def test_hablar_con_la_administracion_en_medio_de_un_reclamo(vecino):
     vecino("Hay humedad")
     (r,) = vecino(textos.BOTON_HABLAR)
     assert r.texto == textos.DERIVADO_HABLAR  # no repregunta
-    assert servicio.bandeja("R4520")["hablar"]
+    assert servicio.bandeja(sesion_demo(), "R4520")["hablar"]
     estado = runtime.grafos()[0].get_state({"configurable": {"thread_id": f"{TEL_4B}:R4520"}}).values
     assert estado["reclamo_en_curso"].descripcion == "Hay humedad"  # el reclamo queda guardado como está
 
@@ -152,7 +153,7 @@ def test_recordatorio_unico_y_despues_incompleto(vecino):
     assert len(al_vecino) == 1 and "ambiente" in al_vecino[0]
 
     assert seguimiento.revisar(ahora + timedelta(hours=49))["incompletos"] == 1
-    (item,) = servicio.bandeja("R4520")["incompletos"]
+    (item,) = servicio.bandeja(sesion_demo(), "R4520")["incompletos"]
     assert "Hay humedad" in item.detalle
     assert seguimiento.revisar(ahora + timedelta(hours=72)) == {"recordatorios": 0, "incompletos": 0}
 

@@ -9,13 +9,12 @@ Cada falla es {"cita": ref, "motivo": str, "vigente": ref | None} (más "hipotes
 dictámenes). Es la forma de dict que usa el grafo de caso.
 """
 import re
-import sqlite3
 from datetime import date
 
 from eliseo.corpus import Corpus, cargar_corpus
 from eliseo.formato import normalizar
 from eliseo.plataforma import lectura
-from eliseo.plataforma.db import get_conn
+from eliseo.plataforma.db import Conexion, get_conn
 from eliseo.schemas import Cita, Dictamen, tipo_de_referencia
 
 _PUNTUACION = re.compile(r"[^\w\s]")
@@ -43,7 +42,7 @@ def fragmento_en_texto(fragmento: str, texto: str) -> bool:
     return True
 
 
-def _texto_de_base(conn: sqlite3.Connection, consorcio_id: str, ref: str) -> str | None:
+def _texto_de_base(conn: Conexion, consorcio_id: str, ref: str) -> str | None:
     """Texto contra el que se comparan los fragmentos de facturas, liquidaciones y precedentes."""
     tipo = tipo_de_referencia(ref)
     if tipo == "Factura":
@@ -58,7 +57,7 @@ def _texto_de_base(conn: sqlite3.Connection, consorcio_id: str, ref: str) -> str
     return None
 
 
-def _verificar_ref(corpus: Corpus | None, conn: sqlite3.Connection, consorcio_id: str, ref: str,
+def _verificar_ref(corpus: Corpus | None, conn: Conexion, consorcio_id: str, ref: str,
                    fragmento: str | None, fecha: date) -> dict | None:
     """None si la referencia es válida; si no, la falla."""
     tipo = tipo_de_referencia(ref)
@@ -92,7 +91,7 @@ def _corpus(consorcio_id: str) -> Corpus | None:
 
 
 def verificar_citas(consorcio_id: str, citas: list[Cita | str], fecha: date | None = None,
-                    conn: sqlite3.Connection | None = None) -> dict:
+                    conn: Conexion | None = None) -> dict:
     """Valida existencia, vigencia a `fecha` (hoy por defecto) y, para las `Cita`, el fragmento.
     Los ids sueltos (str) se validan sin fragmento."""
     corpus, conn, fecha = _corpus(consorcio_id), conn or get_conn(), fecha or date.today()
@@ -106,7 +105,7 @@ def verificar_citas(consorcio_id: str, citas: list[Cita | str], fecha: date | No
 
 
 def verificar_dictamen(consorcio_id: str, dictamen: Dictamen, fecha: date | None = None,
-                       conn: sqlite3.Connection | None = None) -> dict:
+                       conn: Conexion | None = None) -> dict:
     """Valida los ids citados en cada hipótesis; cada falla dice a qué hipótesis pertenece."""
     fallas = []
     for h in dictamen.hipotesis:

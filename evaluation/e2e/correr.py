@@ -56,6 +56,9 @@ RECLAMOS = {
 # ---------------------------------------------------------------- correr un caso
 
 def _entorno_aislado(tmp: Path) -> None:
+    # Vacía (no borrada): así load_dotenv no la vuelve a poner y la evaluación nunca escribe en la
+    # base de Supabase del .env.
+    os.environ["ELISEO_DB_URL"] = ""
     os.environ["ELISEO_DB_PATH"] = str(tmp / "eliseo.db")
     os.environ["ELISEO_CHECKPOINT_DB"] = str(tmp / "grafos.db")
     from scripts.seed_db import seed

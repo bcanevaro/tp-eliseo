@@ -11,9 +11,16 @@ from eliseo.plataforma.db import TABLAS, conectar
 CID = "R4520"
 
 
+# Cambian en cada siembra sin cambiar el estado: la sal de bcrypt y la hora de creación.
+_VOLATILES = {"password_hash", "creado"}
+
+
 def _volcado(path):
     c = conectar(path)
-    datos = {t: [tuple(f) for f in c.execute(f"SELECT * FROM {t} ORDER BY 1").fetchall()] for t in TABLAS}
+    datos = {}
+    for t in TABLAS:
+        filas = c.execute(f"SELECT * FROM {t} ORDER BY 1").fetchall()
+        datos[t] = [tuple(v for k, v in zip(f.keys(), f) if k not in _VOLATILES) for f in filas]
     c.close()
     return datos
 

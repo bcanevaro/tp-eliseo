@@ -40,10 +40,11 @@ Supabase da en un solo servicio Postgres (el esquema actual es relacional y migr
 - **Firebase:** es documental (NoSQL), lo que obliga a reescribir todas las consultas relacionales de `plataforma/` y del Gastos.
 
 ### D3. Acceso a datos con SQLAlchemy Core sobre una URL
-`ELISEO_DB_URL` define la base: `postgresql+psycopg://...` (Supabase) o, si falta, `sqlite:///data/eliseo.db`. `plataforma/` pasa de `sqlite3` a SQLAlchemy Core (tablas declaradas en un solo módulo, consultas con `text()` o el constructor de Core y parámetros con nombre), que genera el SQL de cada motor. No se usa el ORM: las funciones de `lectura` y `escritura` siguen devolviendo dicts y contratos Pydantic como hoy.
+`ELISEO_DB_URL` define la base: `postgresql+psycopg://...` (Supabase) o, si falta, `sqlite:///data/eliseo.db`. `plataforma/db.py` expone una `Conexion` sobre un engine de SQLAlchemy con la misma interfaz de `sqlite3.Connection` que usa el proyecto (`execute` con `?` o `:nombre`, filas por nombre o posición, `commit`), así que ninguno de los ~30 módulos que consultan la base cambia. Cada `execute` toma una conexión del pool en autocommit y la devuelve: el pooler de Supabase corta las conexiones ociosas. El SQL del proyecto se escribe en el subconjunto común a los dos motores (`ON CONFLICT ... DO NOTHING` en lugar de `INSERT OR IGNORE`, `RETURNING` en lugar de `lastrowid`, `CURRENT_DATE`), y solo el esquema tiene variantes por motor (tipo del id autoincremental y fecha por defecto). No se usa el ORM: `lectura` y `escritura` siguen devolviendo dicts y contratos Pydantic como hoy.
 *Alternativas descartadas:*
 - **Cliente REST de Supabase (PostgREST) para todo:** no hay transacciones entre varias escrituras (la ejecución y la decisión del panel las necesitan) y los tests necesitarían red.
 - **`psycopg` directo:** obliga a mantener dos dialectos de SQL a mano, o a correr Postgres en todos los tests.
+- **Declarar las tablas y reescribir las consultas con el constructor de SQLAlchemy Core:** cambia todos los módulos que consultan la base y no agrega nada que el adaptador y el job de Postgres del CI no cubran.
 - **Alembic para migraciones:** el esquema se crea con `metadata.create_all`, que es idempotente. Alembic se agrega cuando haya datos reales que migrar.
 
 El CI corre los tests dos veces: con SQLite y contra un Postgres de servicio de GitHub Actions, para que los dos modos no se separen.
