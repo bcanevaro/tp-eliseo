@@ -50,7 +50,7 @@
 
 ## 7. Integración
 
-- [ ] 7.1 Correr `pytest` y `python evaluation/e2e/correr.py` en los dos motores y verificar que dan igual que antes del change
+- [x] 7.1 Correr `pytest` y `python evaluation/e2e/correr.py` en los dos motores y verificar que dan igual que antes del change
 - [ ] 7.2 Correr la evaluación de punta a punta con LLM (`--juez --langsmith --repeticiones 3`) contra Supabase y registrar el experimento en `evaluation/e2e/RESULTADOS.md`
 - [ ] 7.3 Probar en Telegram real, con dos administraciones y dos edificios: alta de un vecino desde el panel, consulta con un documento recién cargado, urgencia que llega solo al chat de su administración y baja del vecino que corta el acceso
 
