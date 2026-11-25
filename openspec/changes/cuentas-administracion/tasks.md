@@ -25,13 +25,13 @@
 
 ## 4. Documentos por consorcio (documentos-consorcio, D6, D7, D8)
 
-- [ ] 4.1 Agregar la tabla `documentos` y el guardado del original en Storage (o en `data/archivos/` en modo local); test de que el original se recupera igual al subido
-- [ ] 4.2 Escribir el validador sobre el parser de `corpus.py` (ids canónicos, repetidos, fecha del acta, `modifica` inexistente, `consorcio_id` ajeno) con errores por línea; un test por cada regla
-- [ ] 4.3 Hacer que `cargar_corpus` lea de la base los documentos activos con caché por `(consorcio_id, versión)`; verificar que `pytest` sigue en verde y que un acta nueva vale en la consulta siguiente sin reiniciar
-- [ ] 4.4 Confirmar = guardar e indexar con `ingesta.sincronizar`, con `indexado = false` y reintento si Pinecone falla; tests de "Acta que reemplaza un artículo" y "Servicio de búsqueda caído" (BM25 lo encuentra igual)
-- [ ] 4.5 Implementar el reemplazo del reglamento y la baja de actas, y el fallback de `_texto_fuente` a documentos dados de baja; tests de "Baja de un acta citada en un caso viejo" y "Acta de la que depende la vigencia"
-- [ ] 4.6 Agregar al panel la vista "Documentos" (subir, vista previa, confirmar, lista con estado de indexación, descarga del original y plantilla de formato), y verificarla con `AppTest`
-- [ ] 4.7 Correr `python evaluation/documental/eval_recuperacion.py --langsmith` con el corpus cargado desde la base y verificar que las métricas de `evaluation/documental/RESULTADOS.md` no cambian
+- [x] 4.1 Agregar la tabla `documentos` y el guardado del original en Storage (o en `data/archivos/` en modo local); test de que el original se recupera igual al subido
+- [x] 4.2 Escribir el validador sobre el parser de `corpus.py` (ids canónicos, repetidos, fecha del acta, `modifica` inexistente, `consorcio_id` ajeno) con errores por línea; un test por cada regla
+- [x] 4.3 Hacer que `cargar_corpus` lea de la base los documentos activos con caché por `(consorcio_id, versión)`; verificar que `pytest` sigue en verde y que un acta nueva vale en la consulta siguiente sin reiniciar
+- [x] 4.4 Confirmar = guardar e indexar con `ingesta.sincronizar`, con `indexado = false` y reintento si Pinecone falla; tests de "Acta que reemplaza un artículo" y "Servicio de búsqueda caído" (BM25 lo encuentra igual)
+- [x] 4.5 Implementar el reemplazo del reglamento y la baja de actas, y el fallback de `_texto_fuente` a documentos dados de baja; tests de "Baja de un acta citada en un caso viejo" y "Acta de la que depende la vigencia"
+- [x] 4.6 Agregar al panel la vista "Documentos" (subir, vista previa, confirmar, lista con estado de indexación, descarga del original y plantilla de formato), y verificarla con `AppTest`
+- [x] 4.7 Correr `python evaluation/documental/eval_recuperacion.py --langsmith` con el corpus cargado desde la base y verificar que las métricas de `evaluation/documental/RESULTADOS.md` no cambian
 
 ## 5. Bot único y avisos por administración (canal-administracion, D1, D9)
 

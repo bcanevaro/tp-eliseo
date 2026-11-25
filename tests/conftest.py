@@ -45,6 +45,7 @@ def db_path(tmp_path, monkeypatch):
 
     path = tmp_path / "eliseo.db"
     monkeypatch.setenv("ELISEO_DB_PATH", str(path))
+    monkeypatch.setenv("ELISEO_ARCHIVOS_DIR", str(tmp_path / "archivos"))
     monkeypatch.setenv("ELISEO_CHECKPOINT_DB", str(tmp_path / "grafos.db"))
     from scripts.seed_db import seed
 

@@ -14,6 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from eliseo.config import CONSORCIOS_DIR, checkpoint_db_path, db_url, env  # noqa: E402
+from eliseo import documentos  # noqa: E402
 from eliseo.cuentas import crear_administracion, crear_administrador  # noqa: E402
 from eliseo.plataforma.db import borrar_todo, conectar, crear_esquema  # noqa: E402
 
@@ -106,9 +107,11 @@ def seed(destino: Path | str | None = None, raiz: Path = CONSORCIOS_DIR, reset: 
     crear_esquema(conn)
     for archivo in sorted(raiz.glob("*/plataforma.json")):
         datos = json.loads(archivo.read_text(encoding="utf-8"))
-        if conn.execute("SELECT 1 FROM consorcios WHERE consorcio_id = ?",
-                        (datos["consorcio"]["consorcio_id"],)).fetchone() is None:
+        cid = datos["consorcio"]["consorcio_id"]
+        if conn.execute("SELECT 1 FROM consorcios WHERE consorcio_id = ?", (cid,)).fetchone() is None:
             cargar_consorcio(conn, datos)
+        # El reglamento y las actas van a la base como si se subieran por el panel (design D12).
+        documentos.cargar_desde_directorio(conn, cid, archivo.parent)
     cargar_cuenta_demo(conn)
     if not reset:
         conn.close()

@@ -14,7 +14,6 @@ dense y el reranker con `configurar(...)`.
 """
 import logging
 from dataclasses import dataclass, field
-from functools import lru_cache
 from typing import Callable
 
 import snowballstemmer
@@ -58,14 +57,21 @@ class _IndiceBM25:
     bm25: BM25Okapi
 
 
-@lru_cache(maxsize=None)
-def _bm25(consorcio_id: str) -> _IndiceBM25:
-    docs = list(cargar_corpus(consorcio_id))
-    return _IndiceBM25([d.ref for d in docs], BM25Okapi([tokenizar(f"{d.titulo} {d.texto}") for d in docs]))
+def _bm25(consorcio_id: str) -> _IndiceBM25 | None:
+    """El índice BM25 vive en el mismo objeto Corpus: cuando cambian los documentos del consorcio,
+    cargar_corpus devuelve un Corpus nuevo y el índice se rearma solo."""
+    corpus = cargar_corpus(consorcio_id)
+    if not hasattr(corpus, "_bm25"):
+        docs = list(corpus)
+        corpus._bm25 = _IndiceBM25([d.ref for d in docs], BM25Okapi([tokenizar(f"{d.titulo} {d.texto}") for d in docs])) \
+            if docs else None
+    return corpus._bm25
 
 
 def buscar_bm25(consorcio_id: str, consulta: str, top_k: int = TOP_CANDIDATOS) -> list[str]:
     indice = _bm25(consorcio_id)
+    if indice is None:  # consorcio sin documentos
+        return []
     scores = indice.bm25.get_scores(tokenizar(consulta))
     orden = sorted(range(len(scores)), key=lambda i: -scores[i])
     return [indice.refs[i] for i in orden[:top_k] if scores[i] > 0]

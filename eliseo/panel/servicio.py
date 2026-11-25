@@ -14,6 +14,7 @@ otra administración se trata como inexistente (`NoEncontrado`), sin distinguir 
 import json
 from dataclasses import dataclass, field
 
+from eliseo import documentos
 from eliseo.corpus import cargar_corpus
 from eliseo.cuentas import Sesion
 from eliseo.ejecucion import con_numero_de_caso, mensaje_aprobado, tipo_pedido
@@ -171,7 +172,8 @@ def historial(sesion: Sesion, consorcio_id: str, conn=None, limite: int = 20) ->
 def _texto_fuente(conn, consorcio_id: str, ref: str) -> str:
     tipo = tipo_de_referencia(ref)
     if tipo in ("Reglamento", "Acta"):
-        doc = cargar_corpus(consorcio_id).get(ref)
+        # Si ya no está vigente (acta dada de baja, reglamento reemplazado), el texto que se citó.
+        doc = cargar_corpus(consorcio_id).get(ref) or documentos.texto_historico(conn, consorcio_id, ref)
         return f"{doc.titulo}. {doc.texto}" if doc else "(no existe en el corpus)"
     if tipo == "Precedente":
         p = next((p for p in lectura.precedentes(conn, consorcio_id) if p["prec_id"] == ref), None)

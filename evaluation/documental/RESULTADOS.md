@@ -43,3 +43,9 @@ Como contestar sin fuente es el riesgo 1 del Discovery y derivar de más es solo
 
 - **Evaluación del agente con LLM** (task 6.3): necesita crédito en el proxy. Se corre sobre `uso-01`, `borde-02`, `neg-01` y `neg-04` de `evaluation/casos.jsonl`.
 - **Repetir la evaluación con la `pregunta_reescrita` del intake real.** La reescritura sube mucho el score: "perro" da 0,32 y "animales domésticos", 0,99.
+
+## Corpus leído de la base (change cuentas-administracion)
+
+Corrida del 25/11/2026 con `python evaluation/documental/eval_recuperacion.py --langsmith`, con el reglamento y las actas cargados en la tabla `documentos` de Supabase (como si se hubieran subido desde el panel) en lugar de leídos de `data/consorcios/`. Experimento: `hibrido-e5-bge-b3ee227d`.
+
+Las cuatro etapas y la calibración del umbral dan exactamente lo mismo que la corrida anterior (acierto@3, recall@3 y MRR iguales en dense, BM25, RRF y rerank; umbral 0,25 con 0 de 5 sin fuente contestadas y 17 de 26 con fuente contestadas). Cambiar de dónde sale el corpus no cambió la recuperación.

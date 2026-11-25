@@ -99,9 +99,10 @@ def test_dense_descarta_hits_de_otro_consorcio(monkeypatch):
     assert retriever.dense_pinecone(CID, "x", 5) == ["REG-18"]
 
 
-def test_bm25_solo_ve_el_corpus_del_consorcio():
-    with pytest.raises(KeyError):
-        retriever.buscar("OTRO", "animales")
+def test_bm25_solo_ve_el_corpus_del_consorcio(db_path):
+    # Un consorcio sin documentos propios (p. ej. recién dado de alta) no ve los de otro: no hay resultados.
+    assert retriever.buscar("OTRO", "animales").documentos == []
+    assert retriever.buscar(CID, "animales").documentos
 
 
 # ------------------------------------------------------------------ integración con Pinecone

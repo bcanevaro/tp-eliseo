@@ -167,6 +167,24 @@ CREATE TABLE IF NOT EXISTS outbox (
     enviado TEXT,
     creado TEXT NOT NULL DEFAULT {ahora}
 );
+-- Reglamento y actas de cada consorcio, cargados desde el panel (spec documentos-consorcio, design D6).
+-- contenido_md: el Markdown validado, del que sale el corpus. archivo_path: el original (Storage o disco).
+-- estado: activo | reemplazado | baja (lo no activo queda para mostrar citas viejas).
+CREATE TABLE IF NOT EXISTS documentos (
+    doc_id {id},
+    consorcio_id TEXT NOT NULL REFERENCES consorcios,
+    tipo TEXT NOT NULL CHECK (tipo IN ('Reglamento', 'Acta')),
+    ref TEXT NOT NULL,
+    fecha TEXT NOT NULL,
+    contenido_md TEXT NOT NULL,
+    nombre_archivo TEXT,
+    archivo_path TEXT,
+    estado TEXT NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo', 'reemplazado', 'baja')),
+    indexado INTEGER NOT NULL DEFAULT 0,
+    subido_por TEXT,
+    creado TEXT NOT NULL DEFAULT {ahora},
+    actualizado TEXT NOT NULL DEFAULT {ahora}
+);
 CREATE TABLE IF NOT EXISTS precedentes (
     prec_id TEXT PRIMARY KEY,
     consorcio_id TEXT NOT NULL REFERENCES consorcios,
@@ -192,7 +210,7 @@ _DIALECTOS = {
 }
 
 TABLAS = [
-    "outbox", "pedidos", "decisiones", "dictamenes", "derivaciones", "precedentes", "casos",
+    "documentos", "outbox", "pedidos", "decisiones", "dictamenes", "derivaciones", "precedentes", "casos",
     "movimientos_cc", "lineas_liquidacion", "liquidaciones", "facturas",
     "vinculos_canal", "vecinos", "unidades", "consorcios", "administradores", "administraciones",
 ]

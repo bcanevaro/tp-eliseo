@@ -17,7 +17,7 @@ import streamlit as st  # noqa: E402
 from pydantic import ValidationError  # noqa: E402
 
 from eliseo import cuentas  # noqa: E402
-from eliseo.panel import padron, servicio  # noqa: E402
+from eliseo.panel import documentos, padron, servicio  # noqa: E402
 from eliseo.schemas import AccionAdmin, EstadoCaso  # noqa: E402
 
 st.set_page_config(page_title="Eliseo · Panel de la administración", page_icon="🏢", layout="wide")
@@ -92,8 +92,8 @@ if sesion is None:
 with st.sidebar:
     st.title("🏢 Eliseo")
     st.caption(f"{sesion.administracion} · {sesion.nombre}")
-    vista = st.radio("Vista", ["Panel de la administración", "Edificios", "Vecinos", "Simulador de vecino"],
-                     label_visibility="collapsed")
+    vista = st.radio("Vista", ["Panel de la administración", "Edificios", "Vecinos", "Documentos",
+                               "Simulador de vecino"], label_visibility="collapsed")
     consorcios = servicio.consorcios(sesion)
     consorcio_id = None
     if consorcios:
@@ -522,8 +522,89 @@ def vista_vecinos() -> None:
             st.rerun()
 
 
+# ---------------------------------------------------------------- documentos (spec documentos-consorcio)
+
+ESTADOS_DOC = {"activo": "vigente", "reemplazado": "reemplazado", "baja": "dado de baja"}
+
+
+def vista_documentos() -> None:
+    from eliseo import documentos as docs
+
+    if aviso := st.session_state.pop("aviso", None):
+        st.toast(aviso)
+    st.subheader("Documentos")
+    lista = documentos.listar(sesion, consorcio_id)
+    activos = [d for d in lista if d["estado"] == "activo"]
+    if not any(d["tipo"] == "Reglamento" for d in activos):
+        st.warning("Este edificio no tiene reglamento: el bot no puede responder consultas de reglamento.")
+    if any(not d["indexado"] for d in activos):
+        c1, c2 = st.columns([3, 1])
+        c1.info("Hay documentos pendientes de indexar: el bot los encuentra igual, pero la búsqueda es menos precisa.")
+        if c2.button("Reintentar indexación", key="reindexar"):
+            ok = documentos.reintentar_indexacion(sesion, consorcio_id)
+            st.session_state.aviso = "Documentos indexados." if ok else "No se pudo indexar: probá más tarde."
+            st.rerun()
+
+    for d in lista:
+        with st.container(border=True):
+            c1, c2, c3 = st.columns([4, 1, 1])
+            indexado = "✓ indexado" if d["indexado"] else "⏳ pendiente de indexar"
+            c1.markdown(f"**{d['tipo']}** · {d['ref']} · {d['fecha']} · _{ESTADOS_DOC[d['estado']]}_"
+                        + (f" · {indexado}" if d["estado"] == "activo" else ""))
+            c1.caption(f"Subido por {d['subido_por'] or '—'} el {d['creado'][:16]}")
+            nombre, contenido = documentos.original(sesion, d["doc_id"])
+            c2.download_button("Original", contenido, file_name=nombre, key=f"desc-{d['doc_id']}")
+            if d["estado"] == "activo" and d["tipo"] == "Acta":
+                if st.session_state.get("baja-doc") == d["doc_id"]:
+                    if c3.button("Confirmar baja", type="primary", key=f"baja-conf-{d['doc_id']}"):
+                        st.session_state.pop("baja-doc", None)
+                        documentos.dar_de_baja(sesion, consorcio_id, d["doc_id"])
+                        st.session_state.aviso = f"{d['ref']} dado de baja."
+                        st.rerun()
+                elif c3.button("Dar de baja", key=f"baja-{d['doc_id']}"):
+                    st.session_state["baja-doc"] = d["doc_id"]
+                    st.rerun()
+
+    st.divider()
+    st.subheader("Subir un documento")
+    tipo = st.radio("Tipo", ["Reglamento", "Acta"], horizontal=True, key="doc-tipo",
+                    help="Un reglamento nuevo reemplaza al vigente.")
+    st.download_button(f"Descargar plantilla de {tipo.lower()}", docs.PLANTILLA[tipo].encode("utf-8"),
+                       file_name=f"plantilla-{tipo.lower()}.md", key=f"plantilla-{tipo}")
+    # La key cambia después de confirmar o cancelar, así el uploader vuelve a quedar vacío.
+    archivo = st.file_uploader("Archivo Markdown (.md)", key=f"subida-{tipo}-{st.session_state.get('subidas', 0)}")
+    if archivo is None:
+        return
+    contenido = archivo.getvalue()
+    rev = documentos.revisar(sesion, consorcio_id, tipo, contenido)
+    if not rev.ok:
+        st.error("No se puede guardar. Corregí esto y volvé a subirlo:\n\n" + "\n".join(f"- {e}" for e in rev.errores))
+        return
+    st.markdown(f"**Vista previa** · {rev.ref} · {rev.fecha} · {len(rev.secciones)} "
+                + ("artículos" if tipo == "Reglamento" else "puntos"))
+    st.dataframe([{"Id": s.ref, "Título": s.titulo, "Modifica": f"{s.modifica} ({s.efecto})" if s.modifica else "",
+                   "Texto": s.texto[:120]} for s in rev.secciones], hide_index=True, use_container_width=True)
+    if tipo == "Reglamento" and any(d["tipo"] == "Reglamento" for d in activos):
+        st.warning("Este reglamento va a reemplazar al vigente.")
+    c1, c2 = st.columns(2)
+    if c1.button("Confirmar", type="primary", key="doc-confirmar"):
+        try:
+            documentos.confirmar(sesion, consorcio_id, tipo, contenido, archivo.name)
+        except docs.DocumentoInvalido as e:
+            st.error(str(e))
+            return
+        st.session_state.subidas = st.session_state.get("subidas", 0) + 1
+        st.session_state.aviso = f"{rev.ref} guardado: el bot ya lo usa."
+        st.rerun()
+    if c2.button("Cancelar", key="doc-cancelar"):
+        st.session_state.subidas = st.session_state.get("subidas", 0) + 1
+        st.rerun()
+
+
 if vista == "Simulador de vecino":
     vista_simulador()
+elif vista == "Documentos":
+    vista_documentos()
 elif vista == "Edificios":
     vista_edificios()
 elif vista == "Vecinos":
