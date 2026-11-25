@@ -21,8 +21,14 @@ BOTON_CONTACTO = "📱 Compartir mi número"
 
 
 def normalizar_telefono(numero: str) -> str:
-    """Telegram manda el número con o sin '+', a veces con espacios: '549 11…' → '+54911…'."""
-    return "+" + re.sub(r"\D", "", numero)
+    """Telegram manda el número con o sin '+', a veces con espacios, y los celulares argentinos
+    muchas veces sin el 9: '54 11 5555 1234'. El padrón los guarda como '+549' + 10 dígitos
+    (`panel.padron.normalizar_telefono_ar`), así que acá se lleva al mismo formato; si no,
+    el vecino cargado no se encuentra. Los números de otros países quedan como vienen."""
+    d = re.sub(r"\D", "", numero)
+    if d.startswith("54") and not d.startswith("549") and len(d) == 12:
+        d = "549" + d[2:]
+    return "+" + d
 
 
 def contacto_propio(contact_user_id: int | None, from_user_id: int) -> bool:

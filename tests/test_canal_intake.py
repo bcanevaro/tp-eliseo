@@ -54,6 +54,10 @@ def test_solo_vale_el_contacto_propio():
 def test_normaliza_el_telefono():
     assert normalizar_telefono("5491100000402") == TEL_4B
     assert normalizar_telefono("+54 9 11 0000-0402") == TEL_4B
+    # Telegram suele mandar los celulares argentinos sin el 9; el padrón los guarda con el 9.
+    assert normalizar_telefono("+54 115 492 708 3") == "+5491154927083"
+    assert normalizar_telefono("541100000402") == TEL_4B
+    assert normalizar_telefono("+1 415 555 0100") == "+14155550100"
 
 
 # Requirement: Salida a una persona siempre disponible

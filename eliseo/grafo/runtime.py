@@ -36,13 +36,18 @@ def _checkpointer(destino: str):
     serde = JsonPlusSerializer(allowed_msgpack_modules=_tipos_serializables())
     if es_postgres(destino):
         from langgraph.checkpoint.postgres import PostgresSaver
-        from psycopg import Connection
         from psycopg.rows import dict_row
+        from psycopg_pool import ConnectionPool
 
-        # prepare_threshold=None: el pooler de Supabase no admite sentencias preparadas.
-        conn = Connection.connect(destino.replace("postgresql+psycopg://", "postgresql://"),
-                                  autocommit=True, prepare_threshold=None, row_factory=dict_row)
-        saver = PostgresSaver(conn, serde=serde)
+        # Un pool y no una conexión suelta: el pooler de Supabase corta las conexiones inactivas,
+        # y una conexión cerrada dejaba al bot sin responder hasta reiniciarlo. `check` la prueba
+        # antes de prestarla y la reemplaza si está muerta. prepare_threshold=None: el pooler de
+        # Supabase no admite sentencias preparadas.
+        pool = ConnectionPool(destino.replace("postgresql+psycopg://", "postgresql://"),
+                              min_size=1, max_size=5, max_idle=300, open=True,
+                              check=ConnectionPool.check_connection,
+                              kwargs={"autocommit": True, "prepare_threshold": None, "row_factory": dict_row})
+        saver = PostgresSaver(pool, serde=serde)
         saver.setup()
         activar_rls(get_conn(), ("checkpoints", "checkpoint_blobs", "checkpoint_writes", "checkpoint_migrations"))
         return saver
