@@ -15,7 +15,7 @@ from datetime import datetime, timedelta, timezone
 
 import bcrypt
 
-from eliseo.config import env
+from eliseo.config import env, supabase_url
 from eliseo.plataforma.db import Conexion, get_conn, slug_administracion
 
 log = logging.getLogger(__name__)
@@ -53,13 +53,13 @@ def _password_ok(password: str, hash_: str | None) -> bool:
 
 
 def supabase_configurado() -> bool:
-    return bool(env("SUPABASE_URL", default="") and env("SUPABASE_ANON_KEY", default=""))
+    return bool(supabase_url() and env("SUPABASE_ANON_KEY", default=""))
 
 
 def _cliente_supabase(clave: str = "SUPABASE_ANON_KEY"):
     from supabase import create_client
 
-    return create_client(env("SUPABASE_URL"), env(clave))
+    return create_client(supabase_url(), env(clave))
 
 
 def _auth_supabase(email: str, password: str) -> str | None:
@@ -184,7 +184,7 @@ def crear_administrador(administracion_id: str, email: str, nombre: str, passwor
     if conn.execute("SELECT 1 FROM administradores WHERE email = ?", (email,)).fetchone():
         raise ValueError(f"Ya existe una cuenta con el email {email}")
     if con_supabase is None:
-        con_supabase = bool(env("SUPABASE_URL", default="") and env("SUPABASE_SERVICE_ROLE_KEY", default=""))
+        con_supabase = bool(supabase_url() and env("SUPABASE_SERVICE_ROLE_KEY", default=""))
 
     auth_user_id, password_hash = None, None
     if con_supabase:

@@ -38,12 +38,13 @@ Comandos útiles: `openspec list`, `openspec view`, `openspec show <nombre>`, `o
 | `agente-gastos` (implementado) | agente-gastos, motor-reglas | Bautista | Lu (evaluación y arreglos) | bootstrap |
 | `flujo-reclamo-mediador` (implementado) | agente-mediador, precedentes | Federico | Lu (evaluación y arreglos) | bootstrap, documental (se arranca con stubs) |
 | `panel-admin-ejecucion` (implementado) | panel-admin, ejecucion, evaluacion-e2e | Bautista | Lu (evaluación) | bootstrap, canal (se arranca con fixtures) |
+| `cuentas-administracion` (en implementación) | cuentas-admin, padron-consorcios, documentos-consorcio, canal-administracion | a definir | Juani | bootstrap, documental, canal, panel |
 
 El bootstrap deja el grafo entero corriendo con stubs, así cada uno reemplaza su nodo sin esperar a los demás. "Implementado" quiere decir que las tasks están hechas y falta archivar; ✓, que ya está archivado. Las tasks pendientes de `canal-telegram-intake` y `panel-admin-ejecucion` están en su `tasks.md`.
 
 ## Stack del MVP
 
-Python 3.12 (uv) · LangGraph · proxy LiteLLM del ITBA (modelos GPT) · Pinecone · SQLite (plataforma simulada) · Telegram · Streamlit (panel) · LangSmith · pytest.
+Python 3.12 (uv) · LangGraph · proxy LiteLLM del ITBA (modelos GPT) · Pinecone · Supabase (Postgres, Auth y Storage) o SQLite local (plataforma simulada) · Telegram · Streamlit (panel) · LangSmith · pytest.
 
 ## Levantar el entorno
 
@@ -53,11 +54,32 @@ Necesitás [uv](https://docs.astral.sh/uv/) y Python 3.12. No uses Python 3.14: 
 uv venv --python 3.12 .venv
 source .venv/bin/activate
 uv pip install -r requirements.txt
-cp .env.example .env          # completar las claves: proxy del ITBA, Pinecone, LangSmith
-python scripts/seed_db.py     # crea data/eliseo.db con el consorcio de demo
+cp .env.example .env          # completar las claves: proxy del ITBA, Pinecone, LangSmith (y Supabase, ver abajo)
+python scripts/seed_db.py     # carga la demo (administración, cuenta de prueba, consorcio y documentos) sin borrar nada
+python scripts/ingest.py R4520      # indexa el reglamento, las actas y los precedentes en Pinecone
 pytest                        # tiene que dar todo en verde, sin red ni LLM
-python scripts/check_servicios.py   # verifica el .env y la conexión al proxy, Pinecone, LangSmith y Telegram
+python scripts/check_servicios.py   # verifica el .env y la conexión a la base, Supabase, el proxy, Pinecone, LangSmith y Telegram
 ```
+
+### Base de datos: Supabase o SQLite
+
+- **Con Supabase** (`ELISEO_DB_URL` en el `.env`): la base y los checkpoints de los grafos van a Postgres, el login del panel puede usar Supabase Auth y los originales de los documentos van a Supabase Storage. En el proyecto de Supabase:
+  1. **Connect → Connection String → Session pooler**: copiá la URI y reemplazá `[YOUR-PASSWORD]` (con los corchetes) por la contraseña de la base. Va en `ELISEO_DB_URL`.
+  2. **Project Settings → API Keys**: la clave pública (`anon` o `publishable`) va en `SUPABASE_ANON_KEY` y la secreta (`service_role` o `secret`) en `SUPABASE_SERVICE_ROLE_KEY`.
+  3. `SUPABASE_URL` es `https://<proyecto>.supabase.co`, sin ruta.
+- **Sin Supabase** (`ELISEO_DB_URL` vacía): todo queda en `data/eliseo.db` (SQLite) y los originales en `data/archivos/`. Es lo que usan los tests y el CI, que nunca tocan la base del `.env`.
+
+`scripts/seed_db.py` no borra nada: crea las tablas que falten y agrega la demo si no está. `python scripts/seed_db.py --reset` borra **toda** la base y la recrea; con Postgres pide escribir el host para confirmar.
+
+### Cuentas de administración
+
+Cada administración tiene sus cuentas, y cada cuenta ve solo los edificios de su administración. La siembra crea la cuenta de prueba de la Administración Méndez (`admin@demo.eliseo.test` / `eliseo-demo`, configurable en el `.env`). Para dar de alta otra administración:
+
+```bash
+python scripts/alta_administracion.py "Administración Pérez" pedro@ejemplo.com "Pedro Pérez" --password <contraseña>
+```
+
+Con Supabase configurado la cuenta se crea en Supabase Auth (sin `--password`, Supabase le manda una invitación por mail); sin Supabase, la contraseña se guarda con bcrypt.
 
 ## Panel del administrador y simulador de vecino
 
@@ -65,9 +87,14 @@ python scripts/check_servicios.py   # verifica el .env y la conexión al proxy, 
 streamlit run eliseo/panel/app.py
 ```
 
-Abre en http://localhost:8501. Tiene dos vistas:
-- **Panel de la administración:** bandeja (urgencias primero), detalle del dictamen con lo escrito por la IA marcado y cada cita con su fuente, y Aprobar / Modificar / Rechazar con confirmación.
+Abre en http://localhost:8501 y pide iniciar sesión. Tiene cinco vistas, todas limitadas a los edificios de tu administración:
+- **Panel de la administración:** bandeja (urgencias primero), detalle del dictamen con lo escrito por la IA marcado y cada cita con su fuente, y Aprobar / Modificar / Rechazar con confirmación. La decisión queda firmada con tu cuenta.
+- **Edificios:** alta, edición y baja de edificios y sus unidades (los coeficientes tienen que sumar 1).
+- **Vecinos:** alta, edición y baja de vecinos con su celular. Dar de baja a un vecino le corta el bot desde su próximo mensaje.
+- **Documentos:** subir el reglamento y las actas de cada edificio en el formato del corpus (hay una plantilla para descargar). El panel los valida, muestra cómo quedaron partidos y, al confirmar, el bot los usa en el próximo mensaje.
 - **Simulador de vecino:** un chat que usa el mismo runtime que el bot, para probar el flujo completo sin Telegram. Los mensajes que se aprueban en el panel aparecen ahí.
+
+En la barra lateral, **Chat de avisos** genera el código para vincular el chat de Telegram donde tu administración recibe las urgencias.
 
 ## Bot de Telegram
 
@@ -75,11 +102,12 @@ Abre en http://localhost:8501. Tiene dos vistas:
 python -m eliseo.canal.bot
 ```
 
-Necesita `TELEGRAM_BOT_TOKEN` en el `.env`. En Telegram:
-- `/chatid` te devuelve el id del chat: ponelo en `TELEGRAM_CHAT_ADMIN_ID` para recibir ahí las urgencias.
-- `/demo 4°B` (con `ELISEO_DEMO=1`) vincula tu Telegram con el vecino ficticio de esa unidad, porque tu número real no está en la base de demo.
+Necesita `TELEGRAM_BOT_TOKEN` en el `.env`. Hay un solo bot para todas las administraciones: el edificio y la administración de cada vecino salen de su teléfono, cargado en el padrón. En Telegram:
+- `/admin <código>` vincula ese chat como chat de avisos de tu administración (el código lo genera el panel, sirve una vez y vence a los 15 minutos).
+- `/demo 4°B` (con `ELISEO_DEMO=1`) vincula tu Telegram con el vecino ficticio de esa unidad, porque tu número real no está en la base de demo. En un despliegue real tiene que estar apagado.
+- `/chatid` te devuelve el id del chat.
 
-El bot y el panel comparten `data/eliseo.db`: lo que se aprueba en el panel le llega al vecino por Telegram en unos segundos.
+El bot y el panel comparten la base: lo que se aprueba en el panel le llega al vecino por Telegram en unos segundos.
 
 ## Evaluación
 
@@ -104,7 +132,7 @@ python evaluation/mediador/eval_mediador.py --prompt v1 --langsmith             
 ## Docker y CI
 
 ```bash
-docker compose up --build                 # siembra la base si no existe y levanta el panel en :8501
+docker compose up --build                 # carga la demo si falta (sin borrar nada) y levanta el panel en :8501
 docker compose --profile bot up --build   # además el bot de Telegram
 ```
 
@@ -115,8 +143,11 @@ El CI (`.github/workflows/ci.yml`) corre `pytest`, la evaluación de punta a pun
 ```
 eliseo/
   schemas/        contratos compartidos (Pydantic): lo que cruza entre componentes
-  plataforma/     SQLite que simula la plataforma de gestión (lectura con mínimo privilegio)
-  corpus.py       reglamento y actas con ids canónicos (REG-<n>, ACTA-<fecha>#<punto>; los precedentes son PREC-<n>)
+  plataforma/     la base que simula la plataforma de gestión: Postgres (Supabase) o SQLite (lectura con mínimo privilegio)
+  corpus.py       reglamento y actas con ids canónicos (REG-<n>, ACTA-<fecha>#<punto>; los precedentes son PREC-<n>), leídos de la base
+  documentos.py   validación, guardado, baja e indexación del reglamento y las actas de cada consorcio
+  cuentas.py      administraciones, cuentas, login y chat de avisos
+  panel/          app.py (Streamlit) y la lógica por sesión: servicio.py, padron.py, documentos.py
   agentes/        documental/, gastos/ y mediador/: la implementación de cada agente
   grafo/
     conversacion.py   grafo por vecino: identificar → intake → ramas por intent

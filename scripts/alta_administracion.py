@@ -15,7 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from eliseo import cuentas  # noqa: E402
-from eliseo.config import env  # noqa: E402
+from eliseo.config import env, supabase_url  # noqa: E402
 from eliseo.plataforma.db import get_conn  # noqa: E402
 
 
@@ -36,7 +36,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--sin-supabase", action="store_true", help="Crear la cuenta con login local aunque haya Supabase")
     a = p.parse_args(argv)
 
-    con_supabase = False if a.sin_supabase else bool(env("SUPABASE_URL", default="")
+    con_supabase = False if a.sin_supabase else bool(supabase_url()
                                                        and env("SUPABASE_SERVICE_ROLE_KEY", default=""))
     password = a.password
     if not con_supabase and not password:

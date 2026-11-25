@@ -1,12 +1,12 @@
-# docker compose up --build    → siembra la base (si no existe) y levanta el panel en http://localhost:8501
+# docker compose up --build    → carga la demo si falta (sin borrar nada) y levanta el panel en http://localhost:8501
 # docker compose --profile bot up --build   → además, el bot de Telegram
 services:
   seed:
     build: .
     env_file: .env
     volumes: ["./data:/app/data"]
-    # Solo siembra si la base no existe, para no borrar casos en cada arranque.
-    command: ["sh", "-c", "test -f data/eliseo.db || python scripts/seed_db.py"]
+    # No borra nada: crea las tablas que falten y agrega la demo si no está (sirve para SQLite y para Supabase).
+    command: ["python", "scripts/seed_db.py"]
 
   panel:
     build: .

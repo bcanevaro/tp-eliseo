@@ -44,6 +44,15 @@ def es_postgres(url: str | None = None) -> bool:
     return (url or db_url()).startswith("postgresql")
 
 
+def supabase_url() -> str:
+    """La URL del proyecto de Supabase sin ruta: si se copió la de la API (`…supabase.co/rest/v1/`),
+    los clientes de Auth y Storage arman mal sus rutas. "" si no está configurada."""
+    from urllib.parse import urlparse
+
+    u = urlparse(env("SUPABASE_URL", default=""))
+    return f"{u.scheme}://{u.netloc}" if u.scheme and u.netloc else ""
+
+
 def checkpoint_db_path() -> Path:
     """Checkpoints de LangGraph, compartidos por el bot y el panel (design D3)."""
     return Path(env("ELISEO_CHECKPOINT_DB", default=str(DATA_DIR / "grafos.db")))

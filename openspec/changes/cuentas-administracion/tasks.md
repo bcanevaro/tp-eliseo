@@ -44,9 +44,9 @@
 ## 6. Demo, configuración y documentación (datos-ficticios, D12)
 
 - [x] 6.1 Hacer `scripts/seed_db.py` no destructivo, con `--reset` explícito (que pide confirmación en Postgres) y con la cuenta de prueba de la demo; tests de "Reseed idempotente" y "Seed sobre una base con datos del panel"
-- [ ] 6.2 Sembrar en los tests una segunda administración con su consorcio, para que el aislamiento se pruebe con datos reales y no solo con hits simulados; verificar que todos los tests de aislamiento la usan
-- [ ] 6.3 Agregar `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` y `ELISEO_DB_URL` a `.env.example` y a `scripts/check_servicios.py`, y verificar que el chequeo informa la base en uso y si Auth y Storage responden
-- [ ] 6.4 Actualizar el README (login, vistas del panel, vinculación del chat de avisos, Supabase y modo local) y verificar que los comandos documentados corren tal cual en una copia limpia
+- [x] 6.2 Sembrar en los tests una segunda administración con su consorcio, para que el aislamiento se pruebe con datos reales y no solo con hits simulados; verificar que todos los tests de aislamiento la usan
+- [x] 6.3 Agregar `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` y `ELISEO_DB_URL` a `.env.example` y a `scripts/check_servicios.py`, y verificar que el chequeo informa la base en uso y si Auth y Storage responden
+- [x] 6.4 Actualizar el README (login, vistas del panel, vinculación del chat de avisos, Supabase y modo local) y verificar que los comandos documentados corren tal cual en una copia limpia
 
 ## 7. Integración
 

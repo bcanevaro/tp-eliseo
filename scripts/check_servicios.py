@@ -99,14 +99,82 @@ def telegram() -> None:
         if not r.get("ok"):
             return linea(MAL, "Telegram", r.get("description", "token inválido"))
         linea(OK, "Telegram", f"bot @{r['result']['username']}")
-        if not env("TELEGRAM_CHAT_ADMIN_ID", default=""):
-            linea(AVISO, "TELEGRAM_CHAT_ADMIN_ID", "sin configurar: escribile al bot y abrí "
-                  f"https://api.telegram.org/bot<token>/getUpdates para ver tu chat id")
     except Exception as e:  # noqa: BLE001
         linea(MAL, "Telegram", f"{type(e).__name__}: {str(e)[:200]}")
 
 
+def base() -> None:
+    """La base en uso (Supabase o SQLite), sin mostrar la contraseña, y qué tiene cargado."""
+    import re
+
+    from eliseo.config import db_url
+
+    url = db_url()
+    nombre = "Postgres (Supabase)" if url.startswith("postgresql") else "SQLite local"
+    try:
+        from eliseo.plataforma.db import get_conn
+
+        conn = get_conn()
+        cuenta = {t: conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
+                  for t in ("administraciones", "administradores", "consorcios", "vecinos", "documentos")}
+        linea(OK, f"Base: {nombre}", re.sub(r"://([^:/@]+):[^@]+@", r"://\1:***@", url))
+        print("    " + ", ".join(f"{k}: {v}" for k, v in cuenta.items()))
+        if not cuenta["administradores"]:
+            linea(AVISO, "Cuentas", "no hay ninguna: corré python scripts/seed_db.py (demo) o scripts/alta_administracion.py")
+        sin_chat = [f[0] for f in conn.execute("SELECT nombre FROM administraciones WHERE chat_avisos_id IS NULL").fetchall()]
+        if sin_chat:
+            linea(AVISO, "Chat de avisos", "sin vincular en " + ", ".join(sin_chat)
+                  + " (panel → Chat de avisos → /admin <código> en Telegram)")
+        pendientes = conn.execute("SELECT COUNT(*) FROM documentos WHERE estado = 'activo' AND indexado = 0").fetchone()[0]
+        if pendientes:
+            linea(AVISO, "Documentos", f"{pendientes} sin indexar en Pinecone (panel → Documentos → Reintentar, "
+                                       "o python scripts/ingest.py <consorcio>)")
+    except Exception as e:  # noqa: BLE001
+        linea(MAL, f"Base: {nombre}", f"{type(e).__name__}: {str(e)[:200]}")
+
+
+def supabase() -> None:
+    from eliseo.config import supabase_url
+
+    url = supabase_url()
+    if env("SUPABASE_URL", default="").rstrip("/") != url:
+        linea(AVISO, "SUPABASE_URL", f"tiene una ruta de más; se usa {url} (copiá solo eso en el .env)")
+    if not url:
+        return linea(AVISO, "Supabase Auth y Storage", "sin SUPABASE_URL: login local y originales en data/archivos/")
+    try:
+        import requests
+
+        anon = env("SUPABASE_ANON_KEY")
+        r = requests.get(f"{url}/auth/v1/health", headers={"apikey": anon}, timeout=10)
+        linea(OK if r.ok else MAL, "Supabase Auth", f"HTTP {r.status_code}")
+    except KeyError as e:
+        linea(MAL, "Supabase Auth", str(e))
+    except Exception as e:  # noqa: BLE001
+        linea(MAL, "Supabase Auth", f"{type(e).__name__}: {str(e)[:200]}")
+    try:
+        from supabase import create_client
+
+        buckets = [b.name for b in create_client(url, env("SUPABASE_SERVICE_ROLE_KEY")).storage.list_buckets()]
+        linea(OK, "Supabase Storage", f"buckets: {buckets or 'ninguno (se crea «documentos» al subir el primero)'}")
+    except KeyError as e:
+        linea(MAL, "Supabase Storage", str(e))
+    except Exception as e:  # noqa: BLE001
+        linea(MAL, "Supabase Storage", f"{type(e).__name__}: {str(e)[:200]}")
+
+
+def env_versionado() -> None:
+    """El .env tiene la clave de servicio de Supabase: nunca tiene que estar en git."""
+    import subprocess
+
+    raiz = Path(__file__).resolve().parent.parent
+    r = subprocess.run(["git", "ls-files", "--error-unmatch", ".env"], cwd=raiz, capture_output=True)
+    if r.returncode == 0:
+        linea(MAL, ".env", "está versionado en git: sacalo (git rm --cached .env) y rotá las claves")
+    else:
+        linea(OK, ".env", "no está versionado")
+
+
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # la consola de Windows no es UTF-8 por defecto
-    for chequeo in (proxy, estructurado, pinecone, langsmith, telegram):
+    for chequeo in (env_versionado, base, supabase, proxy, estructurado, pinecone, langsmith, telegram):
         chequeo()

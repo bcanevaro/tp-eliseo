@@ -7,19 +7,19 @@ con `storage:` o `local:` para saber de dónde leerla aunque cambie la configura
 import re
 from pathlib import Path
 
-from eliseo.config import DATA_DIR, env
+from eliseo.config import DATA_DIR, env, supabase_url
 
 BUCKET = "documentos"
 
 
 def _con_storage() -> bool:
-    return bool(env("SUPABASE_URL", default="") and env("SUPABASE_SERVICE_ROLE_KEY", default=""))
+    return bool(supabase_url() and env("SUPABASE_SERVICE_ROLE_KEY", default=""))
 
 
 def _storage():
     from supabase import create_client
 
-    cliente = create_client(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"))
+    cliente = create_client(supabase_url(), env("SUPABASE_SERVICE_ROLE_KEY"))
     if not any(b.name == BUCKET for b in cliente.storage.list_buckets()):
         cliente.storage.create_bucket(BUCKET, options={"public": False})
     return cliente.storage.from_(BUCKET)
